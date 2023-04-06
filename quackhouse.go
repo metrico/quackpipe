@@ -85,7 +85,7 @@ func quack(query string) string {
 			panic(err.Error())
 		}
 
-		result = append(result, fmt.Sprint(container))
+		result = append(result, strings.Join(container, " "))
 	}
 
 	output := strings.Join(result,"\n")
