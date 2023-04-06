@@ -27,7 +27,6 @@ jobs:
           export CGO_ENABLED=1 &&
           go get github.com/marcboeker/go-duckdb &&
           cd /go/pkg/mod/github.com/marcboeker/go-duckdb@v1.2.2/ &&
-          make deps.source &&
           make deps.${{ matrix.goos }}.${{ matrix.goarch }}
         project_path: "."
         binary_name: "quackhouse"
