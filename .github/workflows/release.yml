@@ -23,7 +23,12 @@ jobs:
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         goversion: "https://dl.google.com/go/go1.20.2.linux-amd64.tar.gz"
-        pre_command: export CGO_ENABLED=1
+        pre_command: |
+          export CGO_ENABLED=1 &&
+          go get github.com/marcboeker/go-duckdb &&
+          cd /go/pkg/mod/github.com/marcboeker/go-duckdb@v1.2.2/ &&
+          make deps.source &&
+          make deps.${{ matrix.goos }}.${{ matrix.goarch }}
         project_path: "."
         binary_name: "quackhouse"
         executable_compression: upx
