@@ -9,7 +9,7 @@ env:
 jobs:
   releases-matrix:
     name: Release Go Binary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         goos: [linux]
@@ -23,11 +23,7 @@ jobs:
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         goversion: "https://dl.google.com/go/go1.20.2.linux-amd64.tar.gz"
-        pre_command: |
-          export CGO_ENABLED=1 &&
-          go get github.com/marcboeker/go-duckdb &&
-          cd /go/pkg/mod/github.com/marcboeker/go-duckdb@v1.2.2/ &&
-          make deps.${{ matrix.goos }}.${{ matrix.goarch }}
+        pre_command: export CGO_ENABLED=1
         project_path: "."
         binary_name: "quackhouse"
         executable_compression: upx
