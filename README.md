@@ -1,0 +1,2 @@
+# quackhouse
+DuckDB API + Playground
