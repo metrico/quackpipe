@@ -29,6 +29,7 @@ jobs:
         binary_name: "quackhouse"
         executable_compression: upx
         compress_assets: OFF
+        flags: -buildvcs=false
         ldflags: "-linkmode external -extldflags -static"
         
     - name: Log in to the Container registry
