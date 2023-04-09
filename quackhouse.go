@@ -1,14 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	_ "embed"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"time"
 	"io/ioutil"
-	"net/http"
-	"strings"
-	"database/sql"
 	"log"
+	"net/http"
 
 	_ "github.com/marcboeker/go-duckdb"
 )
@@ -24,11 +25,9 @@ type CommandLineFlags struct {
 
 var appFlags CommandLineFlags
 
-
 var (
 	db *sql.DB
 )
-
 
 func check(args ...interface{}) {
 	err := args[len(args)-1]
@@ -39,11 +38,6 @@ func check(args ...interface{}) {
 
 func quack(query string) string {
 
-	var (
-		result    []string
-		container []string
-		pointers  []interface{}
-	)
 	var err error
 
 	db, err = sql.Open("duckdb", "")
@@ -52,46 +46,28 @@ func quack(query string) string {
 	}
 	defer db.Close()
 
-        check(db.Exec("INSTALL httpfs;"))
-        check(db.Exec("LOAD httpfs;"))
-        check(db.Exec("INSTALL json;"))
-        check(db.Exec("LOAD json;"))
-        check(db.Exec("INSTALL parquet;"))
-        check(db.Exec("LOAD parquet;"))
+	check(db.Exec("INSTALL httpfs;"))
+	check(db.Exec("LOAD httpfs;"))
+	check(db.Exec("INSTALL json;"))
+	check(db.Exec("LOAD json;"))
+	check(db.Exec("INSTALL parquet;"))
+	check(db.Exec("LOAD parquet;"))
 
+	startTime := time.Now()
 	rows, err := db.Query(query)
 	if err != nil {
 		return fmt.Sprint(err.Error())
-		// panic(err.Error())
 	}
+	elapsedTime := time.Since(startTime)
 
-	cols, err := rows.Columns()
+	jsonData, err := rowsToJSON(rows, elapsedTime)
 	if err != nil {
-		panic(err.Error())
+		return fmt.Sprint(err.Error())
 	}
 
-	length := len(cols)
+	return string(jsonData)
 
-	for rows.Next() {
-		pointers = make([]interface{}, length)
-		container = make([]string, length)
-
-		for i := range pointers {
-			pointers[i] = &container[i]
-		}
-
-		err = rows.Scan(pointers...)
-		if err != nil {
-			panic(err.Error())
-		}
-
-		result = append(result, strings.Join(container, " "))
-	}
-
-	output := strings.Join(result,"\n")
-	return output
 }
-
 
 /* init flags */
 func initFlags() {
@@ -99,6 +75,97 @@ func initFlags() {
 	appFlags.Port = flag.String("port", "8123", "API port. Default 8123")
 	flag.Parse()
 }
+
+/* JSONCompact formatter */
+
+type MetaData struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+type Statistics struct {
+	Elapsed   float64 `json:"elapsed"`
+	RowsRead  int     `json:"rows_read"`
+	BytesRead int     `json:"bytes_read"`
+}
+
+type OutputJSON struct {
+	Meta                   []MetaData      `json:"meta"`
+	Data                   [][]interface{} `json:"data"`
+	Rows                   int             `json:"rows"`
+	RowsBeforeLimitAtLeast int             `json:"rows_before_limit_at_least"`
+	Statistics             Statistics      `json:"statistics"`
+}
+
+func rowsToJSON(rows *sql.Rows, elapsedTime time.Duration) ([]byte, error) {
+	defer rows.Close()
+
+	// Get column names
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a slice to store maps of column names and their corresponding values
+	var results OutputJSON
+	results.Meta = make([]MetaData, len(columns))
+	results.Data = make([][]interface{}, 0)
+
+	for i, column := range columns {
+		results.Meta[i].Name = column
+	}
+
+	for rows.Next() {
+		// Create a slice to hold pointers to the values of the columns
+		values := make([]interface{}, len(columns))
+		for i := range columns {
+			values[i] = new(interface{})
+		}
+
+		// Scan the values from the row into the pointers
+		err := rows.Scan(values...)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create a slice to hold the row data
+		rowData := make([]interface{}, len(columns))
+		for i, value := range values {
+			// Convert the value to the appropriate Go type
+			switch v := (*(value.(*interface{}))).(type) {
+			case []byte:
+				rowData[i] = string(v)
+			default:
+				rowData[i] = v
+			}
+		}
+		results.Data = append(results.Data, rowData)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	results.Rows = len(results.Data)
+	results.RowsBeforeLimitAtLeast = len(results.Data)
+
+
+	// Populate the statistics object with number of rows, bytes, and elapsed time
+	results.Statistics.Elapsed = elapsedTime.Seconds()
+	results.Statistics.RowsRead = results.Rows
+	// Note: bytes_read is an approximation, it's just the number of rows * number of columns
+	// results.Statistics.BytesRead = results.Rows * len(columns) * 8 // Assuming each value takes 8 bytes
+
+	jsonData, err := json.Marshal(results)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonData, nil
+}
+
+/* main */
 
 func main() {
 
