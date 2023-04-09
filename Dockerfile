@@ -1,12 +1,9 @@
 FROM golang:1.20 as builder
 WORKDIR /
 COPY . .
-RUN CGO_ENABLED=1 go build \
-  -ldflags "-linkmode external -extldflags -static" \
-  -o quackhouse \
-  -a quackhouse.go
+RUN CGO_ENABLED=1 go build -o quackhouse quackhouse.go
 RUN strip quackhouse
   
-FROM scratch
+FROM ubuntu:20.04
 COPY --from=builder /quackhouse /quackhouse
 CMD ["/quackhouse"]
