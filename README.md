@@ -10,8 +10,8 @@ _This is an unholy experiment. Can we silently replace ClickHouse with DuckDB fo
 
 - [x] DuckDB [cgo binding](https://github.com/marcboeker/go-duckdb)
 - [x] GO API
-- [x] JSONCompact output
-- [x] ClickHouse Playground
+- [x] JSONCompact output format
+- [x] Web Playground _(borrowed from ClickHouse)_
 
 
 ### Usage
