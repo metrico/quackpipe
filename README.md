@@ -8,7 +8,7 @@ _This is an unholy experiment. Can we silently replace ClickHouse with DuckDB fo
 
 ### Status
 
-- [x] DuckDB Core
+- [x] DuckDB [cgo binding](https://github.com/marcboeker/go-duckdb)
 - [x] GO API
 - [x] JSONCompact output
 - [x] ClickHouse Playground
