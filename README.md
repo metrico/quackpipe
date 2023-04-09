@@ -17,6 +17,7 @@ _This is an unholy experiment. Can we silently replace ClickHouse with DuckDB fo
 ### Usage
 #### Playground
 Execute queries using the embedded playground
+
 ![image](https://user-images.githubusercontent.com/1423657/230783859-1c69910b-6bf2-42df-8b1d-876b94fc3419.png)
 
 #### API
