@@ -6,5 +6,8 @@ RUN strip quackhouse
   
 FROM ubuntu:20.04
 COPY --from=builder /quackhouse /quackhouse
-RUN echo "INSTALL httpfs; INSTALL json; INSTALL parquet; INSTALL fts; INSTALL postgres_scanner;" | /quackhouse --stdin
+RUN echo "INSTALL httpfs;" | /quackhouse --stdin
+RUN echo "INSTALL json;" | /quackhouse --stdin
+RUN echo "INSTALL parquet;" | /quackhouse --stdin
+RUN echo "INSTALL fts;" | /quackhouse --stdin
 CMD ["/quackhouse"]
