@@ -39,7 +39,7 @@ func check(args ...interface{}) {
 	}
 }
 
-func quack(query string) string {
+func quack(query string, stdin bool) string {
 
 	var err error
 
@@ -49,7 +49,9 @@ func quack(query string) string {
 	}
 	defer db.Close()
 
-	check(db.Exec("LOAD httpfs; LOAD json; LOAD parquet; LOAD inet;"))
+	if stdin != true {
+		check(db.Exec("LOAD httpfs; LOAD json; LOAD parquet;"))
+	}
 
 	startTime := time.Now()
 	rows, err := db.Query(query)
@@ -179,7 +181,7 @@ func main() {
 		if err := scanner.Err(); err != nil {
 			fmt.Fprintln(os.Stderr, "reading standard input:", err)
 		}
-		result := quack(inputString)
+		result := quack(inputString, true)
 		fmt.Println(result)
 
    } else {	
@@ -216,7 +218,7 @@ func main() {
 		if len(query) == 0 {
 			w.Write([]byte(staticPlay))
 		} else {
-			result := quack(query)
+			result := quack(query, false)
 			w.Write([]byte(result))
 		}
 	})
