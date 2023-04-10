@@ -16,10 +16,13 @@ _This is an unholy experiment. Can we silently replace ClickHouse with DuckDB fo
 
 ### Usage
 
-###### Parameters
-  - `--port`: _HTTP API port_
-  - `--host`: _HTTP API host_
-  - `--stdin`: _STDIN query mode_
+##### Parameters
+
+| params | usage | default |
+|-- |-- |-- |
+| `--port` | HTTP API Port | `8123` |
+| `--host` | HTTP API Host | `0.0.0.0` |
+| `--stdin` | STDIN query mode | `false` |
 
 #### Playground
 Execute queries using the embedded playground
@@ -32,4 +35,11 @@ Execute queries using the POST API
 curl -X POST https://quackhouse.fly.dev 
    -H "Content-Type: application/json"
    -d 'SELECT version()'  
+```
+
+#### STDIN
+Execute queries using STDIN
+```
+# echo "SELECT version()" | go run quackhouse.go --stdin
+{"meta":[{"name":"version()","type":""}],"data":[["v0.7.1"]],"rows":1,"rows_before_limit_at_least":1,"statistics":{"elapsed":0.000266523,"rows_read":1,"bytes_read":0}}
 ```
