@@ -49,12 +49,7 @@ func quack(query string) string {
 	}
 	defer db.Close()
 
-	check(db.Exec("INSTALL httpfs;"))
-	check(db.Exec("LOAD httpfs;"))
-	check(db.Exec("INSTALL json;"))
-	check(db.Exec("LOAD json;"))
-	check(db.Exec("INSTALL parquet;"))
-	check(db.Exec("LOAD parquet;"))
+	check(db.Exec("LOAD httpfs; LOAD json; LOAD parquet; LOAD inet;"))
 
 	startTime := time.Now()
 	rows, err := db.Query(query)
