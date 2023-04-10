@@ -23,6 +23,7 @@ var staticPlay string
 type CommandLineFlags struct {
 	Host *string `json:"host"`
 	Port *string `json:"port"`
+	Stdin *bool `json:"stdin"`
 }
 
 var appFlags CommandLineFlags
