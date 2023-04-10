@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"bufio"
+	"os"
 
 	_ "github.com/marcboeker/go-duckdb"
 )
@@ -21,6 +23,7 @@ var staticPlay string
 type CommandLineFlags struct {
 	Host *string `json:"host"`
 	Port *string `json:"port"`
+	Stdin *bool `json:"stdin"`
 }
 
 var appFlags CommandLineFlags
@@ -73,6 +76,7 @@ func quack(query string) string {
 func initFlags() {
 	appFlags.Host = flag.String("host", "0.0.0.0", "API host. Default 0.0.0.0")
 	appFlags.Port = flag.String("port", "8123", "API port. Default 8123")
+	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
 	flag.Parse()
 }
 
@@ -169,7 +173,21 @@ func rowsToJSON(rows *sql.Rows, elapsedTime time.Duration) ([]byte, error) {
 
 func main() {
 
-	initFlags()
+   initFlags()
+   if *appFlags.Stdin == true {
+
+		scanner := bufio.NewScanner((os.Stdin))
+		inputString := ""
+		for scanner.Scan() {
+			inputString = inputString + "\n" + scanner.Text()
+		}
+		if err := scanner.Err(); err != nil {
+			fmt.Fprintln(os.Stderr, "reading standard input:", err)
+		}
+		result := quack(inputString)
+		fmt.Println(result)
+
+   } else {	
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
@@ -212,4 +230,6 @@ func main() {
 	if err := http.ListenAndServe(*appFlags.Host+":"+*appFlags.Port, nil); err != nil {
 		panic(err)
 	}
+
+   }
 }

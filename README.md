@@ -15,6 +15,12 @@ _This is an unholy experiment. Can we silently replace ClickHouse with DuckDB fo
 
 
 ### Usage
+
+###### Parameters
+  - `--port`: _HTTP API port_
+  - `--host`: _HTTP API host_
+  - `--stdin`: _STDIN query mode_
+
 #### Playground
 Execute queries using the embedded playground
 
