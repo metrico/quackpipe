@@ -8,10 +8,11 @@ _DuckDB core with HTTP API and a few extra compatibility bits. If you know, you 
 
 ### Status
 
-- [x] DuckDB [cgo binding](https://github.com/marcboeker/go-duckdb)
-- [x] GO API
+- [x] DuckDB Core [^1]
+  - [c] [cgo binding](https://github.com/marcboeker/go-duckdb) 
+- [x] GO REST API [^3]
   - [x] FORMAT Emulation _(CSV,TSV,JSON)_
-  - [x] Web Playground _(borrowed from C****kHouse)_
+  - [x] Web Playground _(from ClickkHouse, Apache2 Licensed)_ [^2]
 - [x] STDIN Execution
 
 ### Usage
@@ -47,6 +48,12 @@ hello,v0.7.1
 ```
 
 ### Extensions
-Several extensions are installed and loaded by default, including _parquet, json, httpfs_
+Several extensions are pre-installed by default in Docker images, including _parquet, json, httpfs_
+When using HTTP API,   _parquet, json, httpfs_
 
-![image](https://user-images.githubusercontent.com/1423657/231174042-35eb47fa-1015-4e18-9045-c15255394881.png)
+-------
+
+[^1]: DuckDB ® is a trademark of MotherDuck. No direct affiliation or endorsement.
+[^2]: ClickHouse ® is a trademark of ClickHouse Inc. No direct affiliation or endorsement.
+[^3]: Released under the MIT license. All rights reserved by their respective owners.
+
