@@ -298,20 +298,20 @@ func main() {
    if *appFlags.Stdin == true {
 
 		scanner := bufio.NewScanner((os.Stdin))
-		inputString := ""
+		query := ""
 	        default_format := *appFlags.Format
 		for scanner.Scan() {
-			inputString = inputString + "\n" + scanner.Text()
+			query = query + "\n" + scanner.Text()
 		}
 		if err := scanner.Err(); err != nil {
 			fmt.Fprintln(os.Stderr, "reading standard input:", err)
 		}
-		cleanquery, format : = extractAndRemoveFormat(query)
+		cleanquery, format := extractAndRemoveFormat(query)
 		if len(format) > 0 {
-			inputString = cleanquery
+			query = cleanquery
 			default_format = format
 		}
-		result := quack(inputString, true, default_format)
+		result := quack(query, true, default_format)
 		fmt.Println(result)
 
    } else {	
