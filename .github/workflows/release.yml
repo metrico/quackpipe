@@ -25,7 +25,7 @@ jobs:
         goversion: "https://dl.google.com/go/go1.20.2.linux-amd64.tar.gz"
         pre_command: export CGO_ENABLED=1
         project_path: "."
-        binary_name: "quackhouse"
+        binary_name: "quackpipe"
         executable_compression: upx
         compress_assets: OFF
         build_flags: -buildvcs=false
