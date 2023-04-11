@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"encoding/json"
-	"encoding/csv"
+//	"encoding/csv"
 	"flag"
 	"fmt"
 	"time"
@@ -200,14 +200,14 @@ func rowsToJSON(rows *sql.Rows, elapsedTime time.Duration) ([]byte, error) {
 }
 
 /* TSV formatter */
-func rowsToTSV(rows *sql.Rows, columns Bool) (string, error) {
+func rowsToTSV(rows *sql.Rows, cols bool) (string, error) {
 	var result []string
 	columns, err := rows.Columns()
 	if err != nil {
 		return "", err
 	}
 
-	if columns == true {
+	if cols == true {
 		// Append column names as the first row
 		result = append(result, strings.Join(columns, "\t"))
 	}
@@ -239,14 +239,14 @@ func rowsToTSV(rows *sql.Rows, columns Bool) (string, error) {
 }
 
 /* CSV Formatter */
-func rowsToCSV(rows *sql.Rows, columns Bool) (string, error) {
+func rowsToCSV(rows *sql.Rows, cols bool) (string, error) {
 	var result []string
 	columns, err := rows.Columns()
 	if err != nil {
 		return "", err
 	}
 
-	if columns == true {
+	if cols == true {
 		// Append column names as the first row
 		result = append(result, strings.Join(columns, ","))
 	}
@@ -306,7 +306,7 @@ func main() {
 		var err error
 		
 		/* Format Handler */
-		default_format = *appFlags.Format
+		default_format := *appFlags.Format
 		if r.URL.Query().Get("default_format") != "" {
 			default_format = r.URL.Query().Get("default_format")
 		}
