@@ -1,20 +1,25 @@
 <img src="https://user-images.githubusercontent.com/1423657/230504468-39bdecf5-b1c1-462c-bb11-91d147cde8d3.png" width=180 />
 
-> quack, motherducker
+> _quack, motherducker!_
 
-# quackhouse
+# :baby_chick: quackhouse
 
-_DuckDB core with HTTP API and a few extra compatibility bits. If you know, you know._
+_QuackHouse is an API built on top of DuckDB with a few extra compatibility bits. If you know, you know._
 
-### Features
+:hatched_chick:	[public demo](https://quackhouse.fly.dev) _(1x-shared-vcpu, 256Mb)_
 
-- [x] Cloud Storage only _(s3/r2/minio, httpfs)_
+<br>
+
+#### Features
+
 - [x] DuckDB Core [^1]
   - [x] [cgo](https://github.com/marcboeker/go-duckdb) binding
-- [x] GO REST API [^3]
+  - [x] Extension preloading
+- [x] REST API [^3]
   - [x] FORMAT Emulation _(CSV,TSV,JSON)_
   - [x] Web Playground _(from ClickkHouse, Apache2 Licensed)_ [^2]
-- [x] STDIN Execution
+- [x] STDIN Fast Query Execution
+- [x] NO Files. Cloud Storage only _(s3/r2/minio, httpfs, etc)_
 
 ### Usage
 
@@ -52,7 +57,11 @@ hello,v0.7.1
 Several extensions are pre-installed by default in Docker images, including _parquet, json, httpfs_
 When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-loaded.
 
+<br>
+
 -------
+
+###### :black_joker: Disclaimers 
 
 [^1]: DuckDB ® is a trademark of MotherDuck. No direct affiliation or endorsement.
 [^2]: ClickHouse ® is a trademark of ClickHouse Inc. No direct affiliation or endorsement.
