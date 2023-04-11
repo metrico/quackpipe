@@ -63,12 +63,24 @@ func quack(query string, stdin bool, format string) string {
 	elapsedTime := time.Since(startTime)
 
 	
-	if format == "JSONCompact" {
+	if (format == "JSONCompact") || (format == "JSON") {
 		jsonData, err := rowsToJSON(rows, elapsedTime)
 		if err != nil {
 			return fmt.Sprint(err.Error())
 		}
 		return string(jsonData)
+	} else if format == "CSV" {
+		csvData, err := rowsToCSV(rows, false)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(csvData)
+	} else if format == "CSVWithNames" {
+		csvData, err := rowsToCSV(rows, true)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(csvData)
 	} else if format == "TSVWithNames" {
 		tsvData, err := rowsToTSV(rows, true)
 		if err != nil {
@@ -220,6 +232,47 @@ func rowsToTSV(rows *sql.Rows, columns Bool) (string, error) {
 	return strings.Join(result, "\n"), nil
 }
 
+/* CSV Formatter */
+func rowsToCSV(rows *sql.Rows, columns Bool) (string, error) {
+	var result []string
+	columns, err := rows.Columns()
+	if err != nil {
+		return "", err
+	}
+
+	if columns == true {
+		// Append column names as the first row
+		result = append(result, strings.Join(columns, ","))
+	}
+	
+	// Fetch rows and append their values as CSV rows
+	values := make([]interface{}, len(columns))
+	scanArgs := make([]interface{}, len(columns))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+	for rows.Next() {
+		err := rows.Scan(scanArgs...)
+		if err != nil {
+			return "", err
+		}
+
+		var lineParts []string
+		for _, v := range values {
+			lineParts = append(lineParts, fmt.Sprintf("%v", v))
+		}
+		result = append(result, strings.Join(lineParts, ","))
+	}
+
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+
+	return strings.Join(result, "\n"), nil
+}
+
+
+
 /* main */
 
 func main() {
@@ -235,7 +288,7 @@ func main() {
 		if err := scanner.Err(); err != nil {
 			fmt.Fprintln(os.Stderr, "reading standard input:", err)
 		}
-		result := quack(inputString, true)
+		result := quack(inputString, true, *appFlags.Format)
 		fmt.Println(result)
 
    } else {	
@@ -272,7 +325,7 @@ func main() {
 		if len(query) == 0 {
 			w.Write([]byte(staticPlay))
 		} else {
-			result := quack(query, false)
+			result := quack(query, false, *appFlags.Format)
 			w.Write([]byte(result))
 		}
 	})
