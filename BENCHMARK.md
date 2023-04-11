@@ -7,14 +7,14 @@ Non authoritative, hacky and experimental benchmarks for sparking discussion, im
 ```
 LOAD parquet; SELECT town, district, count() AS c, round(avg(price)) AS price FROM read_parquet('https://datasets-documentation.s3.eu-west-3.amazonaws.com/house_parquet/house_1.parquet') GROUP BY town, district LIMIT 10;
 ```
-#### QuackHouse CLI
+#### QuackHouse CLI `v0.7.1.6`
 ##### :icecream: Cold Query
 ```
 real	0m0.888s
 user	0m0.634s
 sys     0m0.042s
 ```
-#### DuckDB CLI
+#### DuckDB CLI `v0.7.1`
 ##### :icecream: Cold Query
 ```
 real	0m1.390s
@@ -28,7 +28,7 @@ user	0m0.470s
 sys     0m0.047s
 ```
 
-#### Clickhouse-local
+#### Clickhouse-local `v23.4.1.1`
 ##### :icecream: Cold Query
 ```
 real	0m3.438s
@@ -40,14 +40,14 @@ sys     0m0.259s
 ```
 LOAD parquet; SELECT town, district, count() AS c, round(avg(price)) AS price FROM read_parquet('https://datasets-documentation.s3.eu-west-3.amazonaws.com/house_parquet/house_1.parquet') GROUP BY town, district LIMIT 10;
 ```
-#### Quackhouse 
+#### Quackhouse `v0.7.1.6`
 ##### :icecream: CURL, HTTP API
 ```
 real	0m0.875s
 user	0m0.675s
 sys     0m0.073s
 ```
-#### Clickhouse-server 
+#### Clickhouse-server `v23.4.1.1`
 ##### :icecream: CURL, HTTP API
 ```
 real	0m1.884s
