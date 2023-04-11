@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"encoding/json"
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"time"
