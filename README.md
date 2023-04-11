@@ -4,7 +4,7 @@
 
 # quackhouse
 
-_This is an unholy experiment. Can we silently replace ClickHouse with DuckDB for selected usecases?_
+_This is an unholy experiment. DuckDB with HTTP API and a few extra compatibility bits._
 
 ### Status
 
