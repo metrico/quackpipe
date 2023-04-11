@@ -1,4 +1,4 @@
-<img src="https://user-images.githubusercontent.com/1423657/230504468-39bdecf5-b1c1-462c-bb11-91d147cde8d3.png" width=180 />
+<img src="https://user-images.githubusercontent.com/1423657/231310060-aae46ee6-c748-44c9-905e-20a4eba0a814.png" width=220 />
 
 > _quack, motherducker!_
 
