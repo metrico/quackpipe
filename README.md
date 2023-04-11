@@ -54,7 +54,7 @@ hello,v0.7.1
 ```
 
 ### Extensions
-Several extensions are pre-installed by default in Docker images, including _parquet, json, httpfs_
+Several extensions are pre-installed by default in Docker images, including _parquet, json, httpfs_<br>
 When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-loaded.
 
 <br>
