@@ -63,7 +63,6 @@ func quack(query string, stdin bool, format string) string {
 	}
 	elapsedTime := time.Since(startTime)
 
-	
 	if (format == "JSONCompact") || (format == "JSON") {
 		jsonData, err := rowsToJSON(rows, elapsedTime)
 		if err != nil {
@@ -82,8 +81,14 @@ func quack(query string, stdin bool, format string) string {
 			return fmt.Sprint(err.Error())
 		}
 		return string(csvData)
-	} else if format == "TSVWithNames" {
+	} else if (format == "TSVWithNames") || (format == "TabSeparatedWithNames") {
 		tsvData, err := rowsToTSV(rows, true)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(tsvData)
+	} else if (format == "TSV") || (format == "TabSeparated") {
+		tsvData, err := rowsToTSV(rows, false)
 		if err != nil {
 			return fmt.Sprint(err.Error())
 		}
@@ -299,7 +304,14 @@ func main() {
 		var bodyBytes []byte
 		var query string
 		var err error
+		
+		/* Format Handler */
+		default_format = *appFlags.Format
+		if r.URL.Query().Get("default_format") != "" {
+			default_format = r.URL.Query().Get("default_format")
+		}
 
+		/* Query Handler */
 		if r.URL.Query().Get("query") != "" {
 			query = r.Form.Get("query")
 		} else if r.Body != nil {
@@ -326,7 +338,7 @@ func main() {
 		if len(query) == 0 {
 			w.Write([]byte(staticPlay))
 		} else {
-			result := quack(query, false, *appFlags.Format)
+			result := quack(query, false, default_format)
 			w.Write([]byte(result))
 		}
 	})
