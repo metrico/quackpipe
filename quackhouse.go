@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"bufio"
 	"os"
+	"strings"
 
 	_ "github.com/marcboeker/go-duckdb"
 )
@@ -24,6 +25,7 @@ type CommandLineFlags struct {
 	Host *string `json:"host"`
 	Port *string `json:"port"`
 	Stdin *bool `json:"stdin"`
+	Format *string `json:"format"`
 }
 
 var appFlags CommandLineFlags
@@ -39,7 +41,7 @@ func check(args ...interface{}) {
 	}
 }
 
-func quack(query string, stdin bool) string {
+func quack(query string, stdin bool, format string) string {
 
 	var err error
 
@@ -60,25 +62,38 @@ func quack(query string, stdin bool) string {
 	}
 	elapsedTime := time.Since(startTime)
 
-	jsonData, err := rowsToJSON(rows, elapsedTime)
-	if err != nil {
-		return fmt.Sprint(err.Error())
+	
+	if format == "JSONCompact" {
+		jsonData, err := rowsToJSON(rows, elapsedTime)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(jsonData)
+	} else if format == "TSVWithNames" {
+		tsvData, err := rowsToTSV(rows, true)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(tsvData)
+	} else {
+		tsvData, err := rowsToTSV(rows, false)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(tsvData)
 	}
-
-	return string(jsonData)
-
 }
 
 /* init flags */
 func initFlags() {
 	appFlags.Host = flag.String("host", "0.0.0.0", "API host. Default 0.0.0.0")
 	appFlags.Port = flag.String("port", "8123", "API port. Default 8123")
+	appFlags.Format = flag.String("format", "JSONCompact", "API port. Default JSONCompact")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
 	flag.Parse()
 }
 
 /* JSONCompact formatter */
-
 type MetaData struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
@@ -164,6 +179,45 @@ func rowsToJSON(rows *sql.Rows, elapsedTime time.Duration) ([]byte, error) {
 	}
 
 	return jsonData, nil
+}
+
+/* TSV formatter */
+func rowsToTSV(rows *sql.Rows, columns Bool) (string, error) {
+	var result []string
+	columns, err := rows.Columns()
+	if err != nil {
+		return "", err
+	}
+
+	if columns == true {
+		// Append column names as the first row
+		result = append(result, strings.Join(columns, "\t"))
+	}
+	
+	// Fetch rows and append their values as tab-delimited lines
+	values := make([]interface{}, len(columns))
+	scanArgs := make([]interface{}, len(columns))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+	for rows.Next() {
+		err := rows.Scan(scanArgs...)
+		if err != nil {
+			return "", err
+		}
+
+		var lineParts []string
+		for _, v := range values {
+			lineParts = append(lineParts, fmt.Sprintf("%v", v))
+		}
+		result = append(result, strings.Join(lineParts, "\t"))
+	}
+
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+
+	return strings.Join(result, "\n"), nil
 }
 
 /* main */
