@@ -2,6 +2,9 @@
 
 Non authoritative, hacky and experimental benchmarks for sparking discussion, improvements and corrections.
 
+![image](https://user-images.githubusercontent.com/1423657/231174042-35eb47fa-1015-4e18-9045-c15255394881.png)
+
+
 
 ### CLI: Remote Parquet
 ```
