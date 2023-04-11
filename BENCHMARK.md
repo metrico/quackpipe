@@ -29,6 +29,7 @@ sys     0m0.047s
 ```
 
 #### Clickhouse-local
+##### :icecream: Cold Query
 ```
 real	0m3.438s
 user	0m1.899s
