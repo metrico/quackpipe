@@ -4,7 +4,7 @@
 
 # :baby_chick: quackhouse
 
-_QuackHouse is an API built on top of DuckDB with a few extra compatibility bits. If you know, you know._
+_QuackHouse is an OLAP API built on top of DuckDB with a few extra compatibility bits. If you know, you know._
 
 :hatched_chick:	[public demo](https://quackhouse.fly.dev) _(1x-shared-vcpu, 256Mb)_
 
