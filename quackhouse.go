@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"encoding/json"
-//	"encoding/csv"
+	"regexp"
 	"flag"
 	"fmt"
 	"time"
@@ -109,6 +109,17 @@ func initFlags() {
 	appFlags.Format = flag.String("format", "JSONCompact", "API port. Default JSONCompact")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
 	flag.Parse()
+}
+
+/* FORMAT Extractor */
+func extractAndRemoveFormat(input string) (string, string) {
+	re := regexp.MustCompile(`(?i)\bFORMAT\s+(\w+)\b`)
+	match := re.FindStringSubmatch(input)
+	if len(match) != 2 {
+		return input, ""
+	}
+	format := match[1]
+	return re.ReplaceAllString(input, ""), format
 }
 
 /* JSONCompact formatter */
@@ -335,7 +346,12 @@ func main() {
 			default_format = r.URL.Query().Get("default_format")
 		}
 		
-		/* TODO: Extract FORMAT from query and override the current `default_format` */
+		/* Extract FORMAT from query and override the current `default_format` */
+		cleanquery, format : = extractAndRemoveFormat(query)
+		if len(format) > 0 {
+			query = cleanquery
+			default_format = format
+		}
 
 		if len(query) == 0 {
 			w.Write([]byte(staticPlay))
