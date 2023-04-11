@@ -29,10 +29,7 @@ _This is an unholy experiment. Can we silently replace ClickHouse with DuckDB fo
 #### Playground
 Execute queries using the embedded playground
 
-<!-- ![image](https://user-images.githubusercontent.com/1423657/230783859-1c69910b-6bf2-42df-8b1d-876b94fc3419.png) -->
-
-![image](https://user-images.githubusercontent.com/1423657/231174042-35eb47fa-1015-4e18-9045-c15255394881.png)
-
+![image](https://user-images.githubusercontent.com/1423657/230783859-1c69910b-6bf2-42df-8b1d-876b94fc3419.png)
 
 #### API
 Execute queries using the POST API
@@ -45,6 +42,11 @@ curl -X POST https://quackhouse.fly.dev
 #### STDIN
 Execute queries using STDIN
 ```
-# echo "SELECT version()" | go run quackhouse.go --stdin
-{"meta":[{"name":"version()","type":""}],"data":[["v0.7.1"]],"rows":1,"rows_before_limit_at_least":1,"statistics":{"elapsed":0.000266523,"rows_read":1,"bytes_read":0}}
+# echo "SELECT 'hello', version() as version FORMAT CSV" | go run quackhouse.go --stdin
+hello,v0.7.1
 ```
+
+### Extensions
+Several extensions are installed and loaded by default, including _parquet, json, httpfs_
+
+![image](https://user-images.githubusercontent.com/1423657/231174042-35eb47fa-1015-4e18-9045-c15255394881.png)
