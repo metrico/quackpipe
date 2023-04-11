@@ -1,14 +1,14 @@
-<img src="https://user-images.githubusercontent.com/1423657/230504468-39bdecf5-b1c1-462c-bb11-91d147cde8d3.png" width=180 />
+<img src="https://user-images.githubusercontent.com/1423657/231310060-aae46ee6-c748-44c9-905e-20a4eba0a814.png" width=220 />
 
 > _quack, motherducker!_
 
-# :baby_chick: quackhouse
+# :baby_chick: quackpipe
 
-_QuackHouse is an OLAP API built on top of DuckDB with a few extra compatibility bits. If you know, you know._
+_QuackPipe is an OLAP API built on top of DuckDB with a few extra compatibility bits. If you know, you know._
 
 Play with DuckDB SQL though a familiar API, without giving up old habits and integrations.
 
-:hatched_chick:	[public demo](https://quackhouse.fly.dev) _(1x-shared-vcpu, 256Mb, minimal resources)_
+:hatched_chick:	[public demo](https://quackpipe.fly.dev) _(1x-shared-vcpu, 256Mb, minimal resources)_
 
 
 ### Feature Status
@@ -48,7 +48,7 @@ Execute queries using the embedded playground
 #### API
 Execute queries using the POST API
 ```
-curl -X POST https://quackhouse.fly.dev 
+curl -X POST https://quackpipe.fly.dev 
    -H "Content-Type: application/json"
    -d 'SELECT version()'  
 ```
@@ -56,7 +56,7 @@ curl -X POST https://quackhouse.fly.dev
 #### STDIN
 Execute queries using STDIN
 ```
-# echo "SELECT 'hello', version() as version FORMAT CSV" | go run quackhouse.go --stdin
+# echo "SELECT 'hello', version() as version FORMAT CSV" | go run quackpipe.go --stdin
 hello,v0.7.1
 ```
 
