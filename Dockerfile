@@ -6,5 +6,5 @@ RUN strip quackpipe
   
 FROM ubuntu:20.04
 COPY --from=builder /quackpipe /quackpipe
-RUN echo "INSTALL httpfs; INSTALL json; INSTALL parquet; INSTALL fts;" | /quackhouse --stdin
+RUN echo "INSTALL httpfs; INSTALL json; INSTALL parquet; INSTALL fts;" | /quackpipe --stdin
 CMD ["/quackpipe"]
