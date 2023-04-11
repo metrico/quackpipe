@@ -4,14 +4,14 @@
 
 # quackhouse
 
-_This is an unholy experiment. DuckDB with HTTP API and a few extra compatibility bits._
+DuckDB core with HTTP API and a few extra compatibility bits. If you know, you know._
 
 ### Status
 
 - [x] DuckDB [cgo binding](https://github.com/marcboeker/go-duckdb)
 - [x] GO API
   - [x] FORMAT Emulation _(CSV,TSV,JSON)_
-  - [x] Web Playground _(borrowed from ClickHouse)_
+  - [x] Web Playground _(borrowed from C****kHouse)_
 - [x] STDIN Execution
 
 ### Usage
