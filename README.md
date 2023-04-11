@@ -6,10 +6,11 @@
 
 _DuckDB core with HTTP API and a few extra compatibility bits. If you know, you know._
 
-### Status
+### Features
 
+- [x] Cloud Storage only _(s3/r2/minio, httpfs)_
 - [x] DuckDB Core [^1]
-  - [c] [cgo binding](https://github.com/marcboeker/go-duckdb) 
+  - [x] [cgo](https://github.com/marcboeker/go-duckdb) binding
 - [x] GO REST API [^3]
   - [x] FORMAT Emulation _(CSV,TSV,JSON)_
   - [x] Web Playground _(from ClickkHouse, Apache2 Licensed)_ [^2]
@@ -49,7 +50,7 @@ hello,v0.7.1
 
 ### Extensions
 Several extensions are pre-installed by default in Docker images, including _parquet, json, httpfs_
-When using HTTP API,   _parquet, json, httpfs_
+When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-loaded.
 
 -------
 
