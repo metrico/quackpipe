@@ -1,4 +1,4 @@
-module duckhouse
+module quackpipe
 
 go 1.18
 
