@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"encoding/json"
+	"regexp"
 	"flag"
 	"fmt"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"bufio"
 	"os"
+	"strings"
 
 	_ "github.com/marcboeker/go-duckdb"
 )
@@ -24,6 +26,7 @@ type CommandLineFlags struct {
 	Host *string `json:"host"`
 	Port *string `json:"port"`
 	Stdin *bool `json:"stdin"`
+	Format *string `json:"format"`
 }
 
 var appFlags CommandLineFlags
@@ -39,7 +42,7 @@ func check(args ...interface{}) {
 	}
 }
 
-func quack(query string, stdin bool) string {
+func quack(query string, stdin bool, format string) string {
 
 	var err error
 
@@ -60,25 +63,66 @@ func quack(query string, stdin bool) string {
 	}
 	elapsedTime := time.Since(startTime)
 
-	jsonData, err := rowsToJSON(rows, elapsedTime)
-	if err != nil {
-		return fmt.Sprint(err.Error())
+	if (format == "JSONCompact") || (format == "JSON") {
+		jsonData, err := rowsToJSON(rows, elapsedTime)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(jsonData)
+	} else if format == "CSV" {
+		csvData, err := rowsToCSV(rows, false)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(csvData)
+	} else if format == "CSVWithNames" {
+		csvData, err := rowsToCSV(rows, true)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(csvData)
+	} else if (format == "TSVWithNames") || (format == "TabSeparatedWithNames") {
+		tsvData, err := rowsToTSV(rows, true)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(tsvData)
+	} else if (format == "TSV") || (format == "TabSeparated") {
+		tsvData, err := rowsToTSV(rows, false)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(tsvData)
+	} else {
+		tsvData, err := rowsToTSV(rows, false)
+		if err != nil {
+			return fmt.Sprint(err.Error())
+		}
+		return string(tsvData)
 	}
-
-	return string(jsonData)
-
 }
 
 /* init flags */
 func initFlags() {
 	appFlags.Host = flag.String("host", "0.0.0.0", "API host. Default 0.0.0.0")
 	appFlags.Port = flag.String("port", "8123", "API port. Default 8123")
+	appFlags.Format = flag.String("format", "JSONCompact", "API port. Default JSONCompact")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
 	flag.Parse()
 }
 
-/* JSONCompact formatter */
+/* FORMAT Extractor */
+func extractAndRemoveFormat(input string) (string, string) {
+	re := regexp.MustCompile(`(?i)\bFORMAT\s+(\w+)\b`)
+	match := re.FindStringSubmatch(input)
+	if len(match) != 2 {
+		return input, ""
+	}
+	format := match[1]
+	return re.ReplaceAllString(input, ""), format
+}
 
+/* JSONCompact formatter */
 type MetaData struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
@@ -166,6 +210,86 @@ func rowsToJSON(rows *sql.Rows, elapsedTime time.Duration) ([]byte, error) {
 	return jsonData, nil
 }
 
+/* TSV formatter */
+func rowsToTSV(rows *sql.Rows, cols bool) (string, error) {
+	var result []string
+	columns, err := rows.Columns()
+	if err != nil {
+		return "", err
+	}
+
+	if cols == true {
+		// Append column names as the first row
+		result = append(result, strings.Join(columns, "\t"))
+	}
+	
+	// Fetch rows and append their values as tab-delimited lines
+	values := make([]interface{}, len(columns))
+	scanArgs := make([]interface{}, len(columns))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+	for rows.Next() {
+		err := rows.Scan(scanArgs...)
+		if err != nil {
+			return "", err
+		}
+
+		var lineParts []string
+		for _, v := range values {
+			lineParts = append(lineParts, fmt.Sprintf("%v", v))
+		}
+		result = append(result, strings.Join(lineParts, "\t"))
+	}
+
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+
+	return strings.Join(result, "\n"), nil
+}
+
+/* CSV Formatter */
+func rowsToCSV(rows *sql.Rows, cols bool) (string, error) {
+	var result []string
+	columns, err := rows.Columns()
+	if err != nil {
+		return "", err
+	}
+
+	if cols == true {
+		// Append column names as the first row
+		result = append(result, strings.Join(columns, ","))
+	}
+	
+	// Fetch rows and append their values as CSV rows
+	values := make([]interface{}, len(columns))
+	scanArgs := make([]interface{}, len(columns))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+	for rows.Next() {
+		err := rows.Scan(scanArgs...)
+		if err != nil {
+			return "", err
+		}
+
+		var lineParts []string
+		for _, v := range values {
+			lineParts = append(lineParts, fmt.Sprintf("%v", v))
+		}
+		result = append(result, strings.Join(lineParts, ","))
+	}
+
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+
+	return strings.Join(result, "\n"), nil
+}
+
+
+
 /* main */
 
 func main() {
@@ -174,14 +298,20 @@ func main() {
    if *appFlags.Stdin == true {
 
 		scanner := bufio.NewScanner((os.Stdin))
-		inputString := ""
+		query := ""
+	        default_format := *appFlags.Format
 		for scanner.Scan() {
-			inputString = inputString + "\n" + scanner.Text()
+			query = query + "\n" + scanner.Text()
 		}
 		if err := scanner.Err(); err != nil {
 			fmt.Fprintln(os.Stderr, "reading standard input:", err)
 		}
-		result := quack(inputString, true)
+		cleanquery, format := extractAndRemoveFormat(query)
+		if len(format) > 0 {
+			query = cleanquery
+			default_format = format
+		}
+		result := quack(query, true, default_format)
 		fmt.Println(result)
 
    } else {	
@@ -192,6 +322,7 @@ func main() {
 		var query string
 		var err error
 
+		/* Query Handler */
 		if r.URL.Query().Get("query") != "" {
 			query = r.Form.Get("query")
 		} else if r.Body != nil {
@@ -214,11 +345,24 @@ func main() {
 		default:
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		}
+		
+		/* Format Handler */
+		default_format := *appFlags.Format
+		if r.URL.Query().Get("default_format") != "" {
+			default_format = r.URL.Query().Get("default_format")
+		}
+		
+		/* Extract FORMAT from query and override the current `default_format` */
+		cleanquery, format := extractAndRemoveFormat(query)
+		if len(format) > 0 {
+			query = cleanquery
+			default_format = format
+		}
 
 		if len(query) == 0 {
 			w.Write([]byte(staticPlay))
 		} else {
-			result := quack(query, false)
+			result := quack(query, false, default_format)
 			w.Write([]byte(result))
 		}
 	})
