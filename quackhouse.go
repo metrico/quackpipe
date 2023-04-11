@@ -304,12 +304,6 @@ func main() {
 		var bodyBytes []byte
 		var query string
 		var err error
-		
-		/* Format Handler */
-		default_format := *appFlags.Format
-		if r.URL.Query().Get("default_format") != "" {
-			default_format = r.URL.Query().Get("default_format")
-		}
 
 		/* Query Handler */
 		if r.URL.Query().Get("query") != "" {
@@ -334,6 +328,14 @@ func main() {
 		default:
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		}
+		
+		/* Format Handler */
+		default_format := *appFlags.Format
+		if r.URL.Query().Get("default_format") != "" {
+			default_format = r.URL.Query().Get("default_format")
+		}
+		
+		/* TODO: Extract FORMAT from query and override the current `default_format` */
 
 		if len(query) == 0 {
 			w.Write([]byte(staticPlay))
