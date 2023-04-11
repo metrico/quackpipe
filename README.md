@@ -23,6 +23,8 @@ _This is an unholy experiment. Can we silently replace ClickHouse with DuckDB fo
 | `--port` | HTTP API Port | `8123` |
 | `--host` | HTTP API Host | `0.0.0.0` |
 | `--stdin` | STDIN query mode | `false` |
+| `--format` | FORMAT handler | `JSONCompact` |
+
 
 #### Playground
 Execute queries using the embedded playground
