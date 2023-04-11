@@ -8,7 +8,7 @@ _QuackHouse is an OLAP API built on top of DuckDB with a few extra compatibility
 
 Play with DuckDB SQL though a familiar API, without giving up old habits and integrations.
 
-:hatched_chick:	[public demo](https://quackhouse.fly.dev) _(1x-shared-vcpu, 256Mb)_
+:hatched_chick:	[public demo](https://quackhouse.fly.dev) _(1x-shared-vcpu, 256Mb, minimal resources)_
 
 
 ### Feature Status
