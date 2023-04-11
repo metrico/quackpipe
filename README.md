@@ -4,7 +4,7 @@
 
 # quackhouse
 
-DuckDB core with HTTP API and a few extra compatibility bits. If you know, you know._
+_DuckDB core with HTTP API and a few extra compatibility bits. If you know, you know._
 
 ### Status
 
