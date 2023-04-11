@@ -6,6 +6,8 @@
 
 _QuackHouse is an OLAP API built on top of DuckDB with a few extra compatibility bits. If you know, you know._
 
+Play with DuckDB SQL though a familiar API and without giving up old habits and integrations.
+
 :hatched_chick:	[public demo](https://quackhouse.fly.dev) _(1x-shared-vcpu, 256Mb)_
 
 
@@ -13,8 +15,13 @@ _QuackHouse is an OLAP API built on top of DuckDB with a few extra compatibility
 - [x] DuckDB Core [^1]
   - [x] [cgo](https://github.com/marcboeker/go-duckdb) binding
   - [x] Extension preloading
+  - [ ] Aliases Extension
 - [x] REST API [^3]
-  - [x] FORMAT Emulation _(CSV,TSV,JSON)_
+  - [x] FORMAT Emulation
+    - [x] CSV, CSVWithNames
+    - [x] TSV, TSVWithNames
+    - [x] JSONCompact
+    - [ ] Native
   - [x] Web Playground _(from ClickkHouse, Apache2 Licensed)_ [^2]
 - [x] STDIN Fast Query Execution
 - [x] NO Files. Cloud Storage only _(s3/r2/minio, httpfs, etc)_
