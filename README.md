@@ -56,7 +56,7 @@ curl -X POST https://quackpipe.fly.dev
 #### STDIN
 Execute queries using STDIN
 ```
-# echo "SELECT 'hello', version() as version FORMAT CSV" | go run quackpipe.go --stdin
+# echo "SELECT 'hello', version() as version FORMAT CSV" | ./quackpipe --stdin
 hello,v0.7.1
 ```
 
