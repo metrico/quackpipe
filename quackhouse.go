@@ -353,7 +353,7 @@ func main() {
 		}
 		
 		/* Extract FORMAT from query and override the current `default_format` */
-		cleanquery, format : = extractAndRemoveFormat(query)
+		cleanquery, format := extractAndRemoveFormat(query)
 		if len(format) > 0 {
 			query = cleanquery
 			default_format = format
