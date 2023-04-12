@@ -27,6 +27,7 @@ type CommandLineFlags struct {
 	Port   *string `json:"port"`
 	Stdin  *bool   `json:"stdin"`
 	Format *string `json:"format"`
+	Params *string `json:"params"`
 }
 
 var appFlags CommandLineFlags
@@ -40,10 +41,10 @@ func check(args ...interface{}) {
 	}
 }
 
-func quack(query string, stdin bool, format string) (string, error) {
+func quack(query string, stdin bool, format string, params string) (string, error) {
 	var err error
 
-	db, err = sql.Open("duckdb", "")
+	db, err = sql.Open("duckdb", params)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -79,6 +80,7 @@ func initFlags() {
 	appFlags.Host = flag.String("host", "0.0.0.0", "API host. Default 0.0.0.0")
 	appFlags.Port = flag.String("port", "8123", "API port. Default 8123")
 	appFlags.Format = flag.String("format", "JSONCompact", "API port. Default JSONCompact")
+	appFlags.Params = flag.String("params", "", "DuckDB optional parameters. Default to none.")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
 	flag.Parse()
 }
@@ -263,10 +265,11 @@ func rowsToCSV(rows *sql.Rows, cols bool) (string, error) {
 
 func main() {
 	initFlags()
+	default_format := *appFlags.Format
+	default_params := *appFlags.Params
 	if *appFlags.Stdin {
 		scanner := bufio.NewScanner((os.Stdin))
 		query := ""
-		default_format := *appFlags.Format
 		for scanner.Scan() {
 			query = query + "\n" + scanner.Text()
 		}
@@ -278,7 +281,7 @@ func main() {
 			query = cleanquery
 			default_format = format
 		}
-		result, err := quack(query, true, default_format)
+		result, err := quack(query, true, default_format, default_params)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -314,13 +317,15 @@ func main() {
 			default:
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			}
-
+			
 			// format handling
-			default_format := *appFlags.Format
 			if r.URL.Query().Get("default_format") != "" {
 				default_format = r.URL.Query().Get("default_format")
 			}
-
+			// param handling
+			if r.URL.Query().Get("default_params") != "" {
+				default_params = r.URL.Query().Get("default_params")
+			}
 			// extract FORMAT from query and override the current `default_format`
 			cleanquery, format := extractAndRemoveFormat(query)
 			if len(format) > 0 {
@@ -331,7 +336,7 @@ func main() {
 			if len(query) == 0 {
 				_, _ = w.Write([]byte(staticPlay))
 			} else {
-				result, err := quack(query, false, default_format)
+				result, err := quack(query, false, default_format, default_params)
 				if err != nil {
 					_, _ = w.Write([]byte(err.Error()))
 				} else {
