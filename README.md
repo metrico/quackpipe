@@ -17,7 +17,7 @@ Play with DuckDB SQL and Cloud storage though a familiar API, without giving up 
   - [x] Extension preloading
   - [ ] Aliases Extension
 - [x] REST API [^3] [^4]
-  - [x] FORMAT Emulation
+  - [x] CH FORMAT Emulation
     - [x] CSV, CSVWithNames
     - [x] TSV, TSVWithNames
     - [x] JSONCompact
