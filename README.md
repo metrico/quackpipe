@@ -6,7 +6,7 @@
 
 _QuackPipe is an OLAP API built on top of DuckDB with a few extra compatibility bits. If you know, you know._
 
-Play with DuckDB SQL though a familiar API, without giving up old habits and integrations.
+Play with DuckDB SQL and Cloud storage though a familiar API, without giving up old habits and integrations.
 
 :hatched_chick:	[public demo](https://quackpipe.fly.dev) _(1x-shared-vcpu, 256Mb, minimal resources)_
 
