@@ -93,8 +93,8 @@ When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-lo
     - [ ] Native
   - [x] Web Playground _(from ClickkHouse, Apache2 Licensed)_ [^2]
 - [x] STDIN Fast Query Execution
-- [x] `:memory:` table + Cloud Storage _(s3/r2/minio, httpfs, etc)_
-
+- [x] `:memory:` mode Cloud Storage _(s3/r2/minio, httpfs, etc)_
+- [x] `:file:` mode using optional _parameters_
 
 -------
 
