@@ -17,22 +17,22 @@ Play with DuckDB SQL and Cloud storage though a familiar API, without giving up 
 ### :seedling: Get Started
 Download a [binary release](https://github.com/metrico/quackpipe/releases/), use [docker](https://github.com/metrico/quackpipe/pkgs/container/quackpipe) or build from source
 
-#### 📦 Download Binary
-```bash
-curl -fsSL github.com/metrico/quackpipe/releases/latest/download/quackpipe-v0.7.1.8-linux-amd64 --output quackpipe \
-&& chmod +x quackpipe
-```
-##### 🔌 Start Server w/ Options
-```bash
-./quackpipe --port 8123
-```
-Run with `-h` for a full list of parameters
-
 #### 🐋 Using Docker
 ```bash
 docker pull ghcr.io/metrico/quackpipe:latest
 docker run -ti --rm -p 8123:8123 ghcr.io/metrico/quackpipe:latest
 ```
+
+#### 📦 Download Binary
+```bash
+curl -fsSL github.com/metrico/quackpipe/releases/latest/download/quackpipe-v0.7.1.8-linux-amd64 --output quackpipe \
+&& chmod +x quackpipe
+```
+##### 🔌 Start Server w/ parameters
+```bash
+./quackpipe --port 8123
+```
+Run with `-h` for a full list of parameters
 
 ##### Parameters
 
