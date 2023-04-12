@@ -11,7 +11,69 @@ Play with DuckDB SQL and Cloud storage though a familiar API, without giving up 
 :hatched_chick:	[public demo](https://quackpipe.fly.dev) _(1x-shared-vcpu, 256Mb, minimal resources)_
 
 
-### Feature Status
+
+<br>
+
+### :seedling: Get Started
+Download a [binary release](https://github.com/metrico/quackpipe/releases/), use [docker](https://github.com/metrico/quackpipe/pkgs/container/quackpipe) or build from source
+
+#### 📦 Download Binary
+```bash
+curl -fsSL github.com/metrico/quackpipe/releases/latest/download/quackpipe -O \
+&& chmod +x quackpipe
+```
+##### 🔌 Start Server w/ Options
+```bash
+./quackpipe --port 8123
+```
+Run with `-h` for a full list of parameters
+
+#### 🐋 Using Docker
+```bash
+docker pull ghcr.io/metrico/quackpipe:latest
+docker run -ti --rm -p 8123:8123 ghcr.io/metrico/quackpipe:latest
+```
+
+##### Parameters
+
+| params | usage | default |
+|-- |-- |-- |
+| `--port` | HTTP API Port | `8123` |
+| `--host` | HTTP API Host | `0.0.0.0` |
+| `--stdin` | STDIN query mode | `false` |
+| `--format` | FORMAT handler | `JSONCompact` |
+
+<br>
+
+#### :point_right: Playground
+Execute queries using the embedded playground
+
+![image](https://user-images.githubusercontent.com/1423657/230783859-1c69910b-6bf2-42df-8b1d-876b94fc3419.png)
+
+#### :point_right: API
+Execute queries using the POST API
+```
+curl -X POST https://quackpipe.fly.dev 
+   -H "Content-Type: application/json"
+   -d 'SELECT version()'  
+```
+
+#### :point_right: STDIN
+Execute queries using STDIN
+```
+# echo "SELECT 'hello', version() as version FORMAT CSV" | ./quackpipe --stdin
+hello,v0.7.1
+```
+
+### :fist_right: Extensions
+Several extensions are pre-installed by default in Docker images, including _parquet, json, httpfs_<br>
+When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-loaded.
+
+<br>
+
+-------
+
+### :construction: Feature Status
 - [x] DuckDB Core [^1]
   - [x] [cgo](https://github.com/marcboeker/go-duckdb) binding
   - [x] Extension preloading
@@ -26,45 +88,6 @@ Play with DuckDB SQL and Cloud storage though a familiar API, without giving up 
 - [x] STDIN Fast Query Execution
 - [x] `:memory:` table + Cloud Storage _(s3/r2/minio, httpfs, etc)_
 
-<br>
-
-### Usage
-
-##### Parameters
-
-| params | usage | default |
-|-- |-- |-- |
-| `--port` | HTTP API Port | `8123` |
-| `--host` | HTTP API Host | `0.0.0.0` |
-| `--stdin` | STDIN query mode | `false` |
-| `--format` | FORMAT handler | `JSONCompact` |
-
-
-#### Playground
-Execute queries using the embedded playground
-
-![image](https://user-images.githubusercontent.com/1423657/230783859-1c69910b-6bf2-42df-8b1d-876b94fc3419.png)
-
-#### API
-Execute queries using the POST API
-```
-curl -X POST https://quackpipe.fly.dev 
-   -H "Content-Type: application/json"
-   -d 'SELECT version()'  
-```
-
-#### STDIN
-Execute queries using STDIN
-```
-# echo "SELECT 'hello', version() as version FORMAT CSV" | ./quackpipe --stdin
-hello,v0.7.1
-```
-
-### Extensions
-Several extensions are pre-installed by default in Docker images, including _parquet, json, httpfs_<br>
-When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-loaded.
-
-<br>
 
 -------
 
