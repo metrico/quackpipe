@@ -19,7 +19,7 @@ Download a [binary release](https://github.com/metrico/quackpipe/releases/), use
 
 #### 📦 Download Binary
 ```bash
-curl -fsSL github.com/metrico/quackpipe/releases/latest/download/quackpipe -O \
+curl -fsSL github.com/metrico/quackpipe/releases/latest/download/quackpipe-v0.7.1.8-linux-amd64 --output quackpipe \
 && chmod +x quackpipe
 ```
 ##### 🔌 Start Server w/ Options
