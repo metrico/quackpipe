@@ -32,6 +32,12 @@ curl -fsSL github.com/metrico/quackpipe/releases/latest/download/quackpipe-amd64
 ```bash
 ./quackpipe --port 8123
 ```
+
+##### 🔌 Start Server w/ file database, READ-ONLY access
+```bash
+./quackpipe --port 8123 --params ""/tmp/test.db?access_mode=READ_ONLY"
+```
+
 Run with `-h` for a full list of parameters
 
 ##### Parameters
@@ -42,7 +48,7 @@ Run with `-h` for a full list of parameters
 | `--host` | HTTP API Host | `0.0.0.0` |
 | `--stdin` | STDIN query mode | `false` |
 | `--format` | FORMAT handler | `JSONCompact` |
-
+| `--params` | Optional Parameters |  |
 <br>
 
 #### :point_right: Playground
