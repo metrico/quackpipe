@@ -24,7 +24,7 @@ Play with DuckDB SQL though a familiar API, without giving up old habits and int
     - [ ] Native
   - [x] Web Playground _(from ClickkHouse, Apache2 Licensed)_ [^2]
 - [x] STDIN Fast Query Execution
-- [x] NO Files. Cloud Storage only _(s3/r2/minio, httpfs, etc)_
+- [x] `:memory:` table + Cloud Storage _(s3/r2/minio, httpfs, etc)_
 
 <br>
 
