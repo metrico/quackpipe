@@ -68,14 +68,14 @@ When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-lo
 
 -------
 
-#### Contributors
+#### Community
 
-&nbsp;&nbsp;&nbsp;&nbsp;[![Contributors for @metrico/quackpipe](https://contributors-img.web.app/image?repo=metrico/quackpipe)](https://github.com/metrico/quackpipe/graphs/contributors)
+&nbsp;&nbsp;&nbsp;&nbsp;[![Contributors @metrico/quackpipe](https://contrib.rocks/image?repo=metrico/quackpipe)](https://github.com/metrico/quackpipe/graphs/contributors)
 
-<!--
-[![Stargazers repo roster for @metrico/quackpipe](https://reporoster.com/stars/metrico/quackpipe)](https://github.com/metrico/quackpipe/stargazers)
-[![Forkers repo roster for @metrico/quackpipe](https://reporoster.com/forks/metrico/quackpipe)](https://github.com/metrico/quackpipe/network/members)
--->
+[![Stargazers for @metrico/quackpipe](https://reporoster.com/stars/metrico/quackpipe)](https://github.com/metrico/quackpipe/stargazers)
+
+<!-- [![Forkers for @metrico/quackpipe](https://reporoster.com/forks/metrico/quackpipe)](https://github.com/metrico/quackpipe/network/members) -->
+
 
 ###### :black_joker: Disclaimers 
 
