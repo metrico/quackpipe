@@ -25,7 +25,7 @@ docker run -ti --rm -p 8123:8123 ghcr.io/metrico/quackpipe:latest
 
 #### 📦 Download Binary
 ```bash
-curl -fsSL github.com/metrico/quackpipe/releases/latest/download/quackpipe-v0.7.1.8-linux-amd64 --output quackpipe \
+curl -fsSL github.com/metrico/quackpipe/releases/latest/download/quackpipe-amd64 --output quackpipe \
 && chmod +x quackpipe
 ```
 ##### 🔌 Start Server w/ parameters
