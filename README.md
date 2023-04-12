@@ -68,6 +68,15 @@ When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-lo
 
 -------
 
+#### Contributors
+
+&nbsp;&nbsp;&nbsp;&nbsp;[![Contributors for @metrico/quackpipe](https://contributors-img.web.app/image?repo=metrico/quackpipe)](https://github.com/metrico/quackpipe/graphs/contributors)
+
+<!--
+[![Stargazers repo roster for @metrico/quackpipe](https://reporoster.com/stars/metrico/quackpipe)](https://github.com/metrico/quackpipe/stargazers)
+[![Forkers repo roster for @metrico/quackpipe](https://reporoster.com/forks/metrico/quackpipe)](https://github.com/metrico/quackpipe/network/members)
+-->
+
 ###### :black_joker: Disclaimers 
 
 [^1]: DuckDB ® is a trademark of MotherDuck. No direct affiliation or endorsement.
