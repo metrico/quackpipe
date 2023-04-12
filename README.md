@@ -35,7 +35,7 @@ curl -fsSL github.com/metrico/quackpipe/releases/latest/download/quackpipe-amd64
 
 ##### 🔌 Start Server w/ file database, READ-ONLY access
 ```bash
-./quackpipe --port 8123 --params ""/tmp/test.db?access_mode=READ_ONLY"
+./quackpipe --port 8123 --params "/tmp/test.db?access_mode=READ_ONLY"
 ```
 
 Run with `-h` for a full list of parameters
