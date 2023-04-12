@@ -26,6 +26,7 @@ jobs:
         pre_command: export CGO_ENABLED=1
         project_path: "."
         binary_name: "quackpipe"
+        asset_name: quackpipe-${{ matrix.goarch }}
         executable_compression: upx
         compress_assets: OFF
         build_flags: -buildvcs=false
