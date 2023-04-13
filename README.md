@@ -73,8 +73,14 @@ hello,v0.7.1
 ```
 
 ### :fist_right: Extensions
-Several extensions are pre-installed by default in Docker images, including _parquet, json, httpfs_<br>
-When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-loaded.
+Several extensions are pre-installed by default in [Docker images](https://github.com/metrico/quackpipe/blob/main/Dockerfile#L9), including _parquet, json, httpfs_<br>
+When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-loaded by the wrapper. _(requires a r/w filesystem)_
+
+Users can pre-install extensions and execute quackpipe using a custom parameters:
+```
+echo "INSTALL httpfs; INSTALL json; INSTALL parquet; INSTALL fts;" | ./quackpipe --stdin --params "?extension_directory=/tmp/"
+./quackpipe --port 8123 --host 0.0.0.0 --params "?extension_directory=/tmp/"
+```
 
 <br>
 
