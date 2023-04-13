@@ -458,6 +458,10 @@
             <span class="hint">&nbsp;(Ctrl/Cmd+Enter)</span>
             <span id="hourglass">⧗</span>
             <span id="check-mark">✔</span>
+	    <select class="shadow" id="dropdown" style="margin-left: 5px;">
+		  <option value=""></option>
+		  <option value='SELECT version();'>Version</option>
+	    </select>
             <span id="stats"></span>
             <span id="toggle-dark">🌑</span><span id="toggle-light">🌞</span>
         </div>
@@ -480,6 +484,14 @@
     /// This is to avoid race conditions.
     let request_num = 0;
 
+    // query presets
+    var querybox = document.getElementById('query');
+    var querypresets = document.getElementById('dropdown');
+    querypresets.onchange = function() {
+      var newquery = querypresets.options[querypresets.selectedIndex].value;
+      querybox.value = newquery;
+    }
+	
     /// Save query in history only if it is different.
     let previous_query = '';
 
