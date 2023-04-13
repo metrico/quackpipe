@@ -78,7 +78,7 @@ When using HTTP API, _httpfs, parquet, json_ extensions are automatically pre-lo
 
 Users can pre-install extensions and execute quackpipe using a custom parameters:
 ```
-echo "INSTALL httpfs; INSTALL json; INSTALL parquet; INSTALL fts;" | ./quackpipe --stdin --params "?extension_directory=/tmp/"
+echo "INSTALL httpfs;" | ./quackpipe --stdin --params "?extension_directory=/tmp/"
 ./quackpipe --port 8123 --host 0.0.0.0 --params "?extension_directory=/tmp/"
 ```
 
