@@ -459,9 +459,12 @@
             <span id="hourglass">⧗</span>
             <span id="check-mark">✔</span>
 	    <select class="shadow" id="dropdown" style="margin-left: 5px;">
-		  <option value=""></option>
+		    <!-- newline is &#13;&#10; -->
+		    <option value=""></option>
 		  <option value='SELECT version();'>Version</option>
-	    </select>
+		  <option value='SELECT * &#13;&#10;FROM read_csv_auto('https://s3.us-east-1.amazonaws.com/altinity-clickhouse-data/airline/data/airports/Airports.csv')&#13;&#10;WHERE Country == 'Italy'&#13;&#10;ORDER BY City ASC'>Airports S3/CSV</option>
+		  <option value='SELECT town,district,count() AS c,&#13;&#10;FROM read_parquet('https://datasets-documentation.s3.eu-west-3.amazonaws.com/house_parquet/house_0.parquet')&#13;&#10;WHERE read_parquet.town == 'LONDON'&#13;&#10;GROUP BY town,district&#13;&#10;ORDER BY c DESC&#13;&#10;LIMIT 10'>House Market S3/Parquet</option>
+		</select>
             <span id="stats"></span>
             <span id="toggle-dark">🌑</span><span id="toggle-light">🌞</span>
         </div>
