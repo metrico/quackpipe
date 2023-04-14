@@ -296,7 +296,8 @@ func main() {
 
 			// handle query parameter
 			if r.URL.Query().Get("query") != "" {
-				query = r.Form.Get("query")
+				// query = r.FormValue("query")
+				query = r.URL.Query().Get("query")
 			} else if r.Body != nil {
 				bodyBytes, err = ioutil.ReadAll(r.Body)
 				if err != nil {
@@ -345,7 +346,7 @@ func main() {
 			}
 		})
 
-		fmt.Printf("API Running: %s:%s\n", *appFlags.Host, *appFlags.Port)
+		fmt.Printf("QuackPipe API Running: %s:%s\n", *appFlags.Host, *appFlags.Port)
 		if err := http.ListenAndServe(*appFlags.Host+":"+*appFlags.Port, nil); err != nil {
 			panic(err)
 		}
