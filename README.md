@@ -91,7 +91,7 @@ echo "INSTALL httpfs;" | ./quackpipe --stdin --params "?extension_directory=/tmp
   - [x] [cgo](https://github.com/marcboeker/go-duckdb) binding
   - [x] Extension preloading
   - [ ] Aliases Extension
-- [x] REST API [^3] [^4]
+- [x] REST API [^3]
   - [x] CH FORMAT Emulation
     - [x] CSV, CSVWithNames
     - [x] TSV, TSVWithNames
@@ -117,7 +117,6 @@ echo "INSTALL httpfs;" | ./quackpipe --stdin --params "?extension_directory=/tmp
 
 ###### :black_joker: Disclaimers 
 
-[^1]: DuckDB ® is a trademark of DuckDB Foundation. No direct affiliation or endorsement.
+[^1]: DuckDB ® is a trademark of DuckDB Foundation. All rights reserved by their respective owners.
 [^2]: ClickHouse ® is a trademark of ClickHouse Inc. No direct affiliation or endorsement.
 [^3]: Released under the MIT license. See LICENSE for details. All rights reserved by their respective owners.
-[^4]: Elements of this experiments (including potential bugs) were co-authored by ChatGPT.
