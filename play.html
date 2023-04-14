@@ -459,9 +459,15 @@
             <span id="hourglass">⧗</span>
             <span id="check-mark">✔</span>
 	    <select class="shadow" id="dropdown" style="margin-left: 5px;">
-		  <option value=""></option>
-		  <option value='SELECT version();'>Version</option>
-	    </select>
+		    <!-- newline: &#13;&#10; single quote: &#39; -->
+		    <option value=""></option>
+		    <option value='SELECT version();'>Version</option>
+		    <option value='SELECT * &#13;&#10;FROM read_csv_auto("https://s3.us-east-1.amazonaws.com/altinity-clickhouse-data/airline/data/airports/Airports.csv")&#13;&#10;WHERE Country == &#39;Italy&#39;&#13;&#10;ORDER BY City ASC'>Scan S3/CSV</option>
+		    <option value='SELECT town,district,count() AS c,&#13;&#10;FROM read_parquet("https://datasets-documentation.s3.eu-west-3.amazonaws.com/house_parquet/house_0.parquet")&#13;&#10;WHERE read_parquet.town == &#39;LONDON&#39;&#13;&#10;GROUP BY town,district&#13;&#10;ORDER BY c DESC&#13;&#10;LIMIT 10'>Scan/Group S3/Parquet</option>
+		    <option value='SELECT count(*) FROM "https://shell.duckdb.org/data/tpch/0_01/parquet/lineitem.parquet";'>Count HTTP/Parquet</option>
+		    <option value='SELECT avg(c_acctbal) FROM "https://shell.duckdb.org/data/tpch/0_01/parquet/customer.parquet";'>Avg HTTP/Parquet</option>
+		    <option value='SELECT n_name, count(*)&#13;&#10;  FROM "https://shell.duckdb.org/data/tpch/0_01/parquet/customer.parquet",&#13;&#10;       "https://shell.duckdb.org/data/tpch/0_01/parquet/nation.parquet"&#13;&#10;  WHERE c_nationkey = n_nationkey GROUP BY n_name;'>Join HTTP/Parquet</option>
+		</select>
             <span id="stats"></span>
             <span id="toggle-dark">🌑</span><span id="toggle-light">🌞</span>
         </div>
