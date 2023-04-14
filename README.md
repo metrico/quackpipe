@@ -117,7 +117,7 @@ echo "INSTALL httpfs;" | ./quackpipe --stdin --params "?extension_directory=/tmp
 
 ###### :black_joker: Disclaimers 
 
-[^1]: DuckDB ® is a trademark of MotherDuck. No direct affiliation or endorsement.
+[^1]: DuckDB ® is a trademark of DuckDB Foundation. No direct affiliation or endorsement.
 [^2]: ClickHouse ® is a trademark of ClickHouse Inc. No direct affiliation or endorsement.
 [^3]: Released under the MIT license. See LICENSE for details. All rights reserved by their respective owners.
 [^4]: Elements of this experiments (including potential bugs) were co-authored by ChatGPT.
