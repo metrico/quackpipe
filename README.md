@@ -11,7 +11,11 @@ Play with DuckDB SQL and Cloud storage though a familiar API, without giving up 
 ### Demos
 :hatched_chick: try a [sample s3/parquet query](https://quackpipe.metrico.in/?user=default#U0VMRUNUCiAgICB0b3duLAogICAgZGlzdHJpY3QsCiAgICBjb3VudCgpIEFTIGMsCkZST00gcmVhZF9wYXJxdWV0KCdodHRwczovL2RhdGFzZXRzLWRvY3VtZW50YXRpb24uczMuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb20vaG91c2VfcGFycXVldC9ob3VzZV8wLnBhcnF1ZXQnKQpXSEVSRSByZWFkX3BhcnF1ZXQudG93biA9PSAnTE9ORE9OJwpHUk9VUCBCWQogICAgdG93biwKICAgIGRpc3RyaWN0Ck9SREVSIEJZIGMgREVTQwpMSU1JVCAxMA==) _(deta.space free tier, AWS Lambdas)_<br>
 :hatched_chick: try our [miniature playground](https://quackpipe.fly.dev) _(fly.io free tier, 1x-shared-vcpu, 256Mb)_ 
+:hatched_chick: launch your own free instance on fly.io
 
+<a href="https://flyctl.sh/shell?repo=metrico/quackpipe" target="_blank">
+  <img src="https://user-images.githubusercontent.com/1423657/236479471-a1cb0484-dfd3-4dc2-8d62-121debd7faa3.png" width=300>
+</a>
 
 <br>
 
