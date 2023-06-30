@@ -1,7 +1,9 @@
 FROM golang:1.20 as builder
 WORKDIR /
 COPY . .
-RUN CGO_ENABLED=1 go build -o quackpipe quackpipe.go
+RUN go get github.com/marcboeker/go-duckdb
+RUN go mod tidy
+RUN CGO_ENABLED=1 go build -tags=duckdb_from_source -o quackpipe quackpipe.go
 RUN strip quackpipe
   
 FROM ubuntu:20.04
