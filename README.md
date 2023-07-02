@@ -100,7 +100,7 @@ Query id: dd878948-bec8-4abe-9e06-2f5813653c3a
 ┌─id─┬─num─┐
 │  1 │   2 │
 └────┴─────┘
-1 rows in set. Elapsed: 0.268 sec.
+1 rows in set. Elapsed: 0.155 sec.
 ```
 
 <br>
@@ -120,6 +120,7 @@ Query id: dd878948-bec8-4abe-9e06-2f5813653c3a
     - [ ] Native
   - [x] Web Playground _(from ClickkHouse, Apache2 Licensed)_ [^2]
 - [x] STDIN Fast Query Execution
+- [x] ClickHouse Executable UDF
 - [x] `:memory:` mode Cloud Storage _(s3/r2/minio, httpfs, etc)_
 - [x] `:file:` mode using optional _parameters_
 
