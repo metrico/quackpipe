@@ -103,7 +103,7 @@ Query id: dd878948-bec8-4abe-9e06-2f5813653c3a
 1 rows in set. Elapsed: 0.155 sec.
 ```
 
-🃏 What is this? Think of it as a SELECT within a SELECT with a different syntax.
+🃏 What is this? Think of it as a SELECT within a SELECT with a different syntax.<br>
 🃏 Function and Format confusion? Make DuckDB SQL feel like ClickHouse with the included [ClickHuose Macro Aliases](https://github.com/metrico/quackpipe/blob/main/aliases.sql)
 
 
