@@ -86,6 +86,23 @@ echo "INSTALL httpfs;" | ./quackpipe --stdin --params "?extension_directory=/tmp
 ./quackpipe --port 8123 --host 0.0.0.0 --params "?extension_directory=/tmp/"
 ```
 
+
+### ⏩ ClickHouse UDF
+
+Quackpipe can be used as [executable UDF](https://clickhouse.com/docs/en/engines/table-functions/executable) to get DuckDB data IN/OUT of ClickHouse queries:
+
+```sql
+SELECT *
+FROM executable('quackpipe -stdin -format TSV', TSV, 'id UInt32, num UInt32', (
+    SELECT 'SELECT 1, 2'
+))
+Query id: dd878948-bec8-4abe-9e06-2f5813653c3a
+┌─id─┬─num─┐
+│  1 │   2 │
+└────┴─────┘
+1 rows in set. Elapsed: 0.268 sec.
+```
+
 <br>
 
 -------
