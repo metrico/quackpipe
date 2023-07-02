@@ -103,7 +103,7 @@ Query id: dd878948-bec8-4abe-9e06-2f5813653c3a
 1 rows in set. Elapsed: 0.155 sec.
 ```
 
-🃏 You can even make DuckDB SQL feel more like home by using [ClickHuose Command Aliases](https://github.com/metrico/quackpipe/blob/main/aliases.sql)
+🃏 Format Confusion? Make DuckDB SQL feel more like ClickHouse by using [ClickHuose Macro Aliases](https://github.com/metrico/quackpipe/blob/main/aliases.sql)
 
 
 <br>
