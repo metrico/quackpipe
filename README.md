@@ -104,7 +104,7 @@ Query id: dd878948-bec8-4abe-9e06-2f5813653c3a
 ```
 
 🃏 What is this? Think of it as a SELECT within a SELECT with a different syntax.<br>
-🃏 Function and Format confusion? Make DuckDB SQL feel like ClickHouse with the included [ClickHuose Macro Aliases](https://github.com/metrico/quackpipe/blob/main/aliases.sql)
+🃏 Format confusion? Make DuckDB SQL feel like ClickHouse with the included [ClickHuose Macro Aliases](https://github.com/metrico/quackpipe/blob/main/aliases.sql)
 
 
 <br>
