@@ -30,7 +30,8 @@ jobs:
         executable_compression: upx
         compress_assets: OFF
         build_flags: -buildvcs=false
-#        ldflags: "-linkmode external -extldflags -static"
+        #ldflags: "-linkmode external -extldflags -static"
+        ldflags: "-extldflags=-static"
         
     - name: Log in to the Container registry
       uses: docker/login-action@v2.1.0
