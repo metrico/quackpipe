@@ -1,6 +1,6 @@
 module quackpipe
 
-go 1.18
+go 1.20
 
 require github.com/marcboeker/go-duckdb v1.5.1
 
