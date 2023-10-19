@@ -21,6 +21,9 @@ import (
 //go:embed play.html
 var staticPlay string
 
+//go:embed aliases.sql
+var staticAliases string
+
 // params for Flags
 type CommandLineFlags struct {
 	Host   *string `json:"host"`
@@ -53,7 +56,11 @@ func quack(query string, stdin bool, format string, params string) (string, erro
 	if !stdin {
 		check(db.Exec("LOAD httpfs; LOAD json; LOAD parquet;"))
 	}
-
+	
+	if staticAliases != "" {
+		check(db.Exec(staticAliases))
+	}
+	
 	startTime := time.Now()
 	rows, err := db.Query(query)
 	if err != nil {
