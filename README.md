@@ -58,7 +58,7 @@ Run with `-h` for a full list of parameters
 #### :point_right: Playground
 Execute queries using the embedded playground
 
-<a href="https://quackpipe.fly.dev" target=_blank><img src="https://user-images.githubusercontent.com/1423657/230783859-1c69910b-6bf2-42df-8b1d-876b94fc3419.png" width=800></a>
+<a href="https://quackpipe.fly.dev" target=_blank><img src="https://github.com/metrico/quackpipe/assets/1423657/fa0c8b8f-7480-4bd1-b8b2-bee24ee39186" width=800></a>
 
 #### :point_right: API
 Execute queries using the POST API
