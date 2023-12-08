@@ -86,9 +86,7 @@ echo "INSTALL httpfs;" | ./quackpipe --stdin --params "?extension_directory=/tmp
 ```
 
 
-### ⏩ ClickHouse UDF
-
-<img src="https://github.com/metrico/quackpipe/assets/1423657/f66fd8f8-a756-40a6-bee9-7979b09f2576" height=80 >
+### <img src="https://github.com/metrico/quackpipe/assets/1423657/f66fd8f8-a756-40a6-bee9-7979b09f2576" height=20 > ClickHouse UDF
 
 Quackpipe can be used as [executable UDF](https://clickhouse.com/docs/en/engines/table-functions/executable) to get DuckDB data IN/OUT of ClickHouse queries:
 
