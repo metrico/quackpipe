@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         goos: [linux]
-        goarch: [amd64]
+        goarch: [amd64, arm64]
 
     steps:
     - uses: actions/checkout@v3
@@ -31,6 +31,7 @@ jobs:
         compress_assets: OFF
         build_flags: -buildvcs=false
         #ldflags: "-linkmode external -extldflags -static"
+        extra_files: LICENSE README.md
         
     - name: Log in to the Container registry
       uses: docker/login-action@v2.1.0
