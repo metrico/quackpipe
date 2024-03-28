@@ -4,7 +4,7 @@
 
 # :baby_chick: quackpipe
 
-_QuackPipe is an OLAP API built on top of DuckDB with a few extra compatibility bits. If you know, you know._
+_QuackPipe is a serverless OLAP API built on top of DuckDB emulating and aliasing the ClickHouse HTTP API_
 
 Play with DuckDB SQL and Cloud storage though a familiar API, without giving up old habits and integrations.
 
