@@ -18,6 +18,8 @@ Play with DuckDB SQL and Cloud storage though a familiar API, without giving up 
 
 <br>
 
+<br>
+
 ### :seedling: Get Started
 Download a [binary release](https://github.com/metrico/quackpipe/releases/), use [docker](https://github.com/metrico/quackpipe/pkgs/container/quackpipe) or build from source
 
