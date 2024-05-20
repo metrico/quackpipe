@@ -14,7 +14,7 @@ import (
     "sync"
     "time"
 	
-    _ "github.com/mattn/go-duckdb"
+    _ "github.com/marcboeker/go-duckdb" // load duckdb driver
 )
 
 type Session struct {
