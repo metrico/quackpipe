@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
 	"bufio"
 	"database/sql"
 	_ "embed"
@@ -336,6 +335,7 @@ func main() {
 				default_params = r.URL.Query().Get("default_params")
 			}
 			// auth to hash based temp file storage
+			/*
 			username, password, ok := r.BasicAuth()
 			if ok && len(password) > 0 {
 				hash := sha256.Sum256([]byte(username + password))
@@ -343,6 +343,7 @@ func main() {
 				repath := regexp.MustCompile(`(.*?)\?`)
 				default_params = repath.ReplaceAllString(default_params, repath+"?")
 			}
+			*/
 			// extract FORMAT from query and override the current `default_format`
 			cleanquery, format := extractAndRemoveFormat(query)
 			if len(format) > 0 {
