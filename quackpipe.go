@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"bufio"
 	"database/sql"
 	_ "embed"
@@ -63,15 +64,17 @@ func quack(query string, stdin bool, format string, params string, hashdb string
 
 
 	if !stdin {
-		check(db.Exec("LOAD httpfs; LOAD json; LOAD parquet;"))
+		check(db.ExecContext(context.Background(),"LOAD httpfs; LOAD json; LOAD parquet;"))
+		check(db.ExecContext(context.Background(),"SET autoinstall_known_extensions=1;"))
+		check(db.ExecContext(context.Background(),"SET autoload_known_extensions=1;"))
 	}
 
 	if (alias) && (staticAliases != "") {
-		check(db.Exec(staticAliases))
+		check(db.ExecContext(context.Background(), staticAliases))
 	}
 
 	startTime := time.Now()
-	rows, err := db.Query(query)
+	rows, err := db.QueryContext(context.Background(), query)
 	if err != nil {
 		return "", err
 	}
