@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"crypto/sha256"
 
 	_ "github.com/marcboeker/go-duckdb" // load duckdb driver
 )
@@ -56,11 +57,11 @@ func quack(query string, stdin bool, format string, params string) (string, erro
 	if !stdin {
 		check(db.Exec("LOAD httpfs; LOAD json; LOAD parquet;"))
 	}
-	
+
 	if staticAliases != "" {
 		check(db.Exec(staticAliases))
 	}
-	
+
 	startTime := time.Now()
 	rows, err := db.Query(query)
 	if err != nil {
@@ -325,7 +326,7 @@ func main() {
 			default:
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			}
-			
+
 			// format handling
 			if r.URL.Query().Get("default_format") != "" {
 				default_format = r.URL.Query().Get("default_format")
@@ -335,15 +336,13 @@ func main() {
 				default_params = r.URL.Query().Get("default_params")
 			}
 			// auth to hash based temp file storage
-			/*
 			username, password, ok := r.BasicAuth()
+			hashdb := ""
 			if ok && len(password) > 0 {
 				hash := sha256.Sum256([]byte(username + password))
-				hashdb, _ := fmt.Printf("/tmp/%x.db", hash)
-				repath := regexp.MustCompile(`(.*?)\?`)
-				default_params = repath.ReplaceAllString(default_params, repath+"?")
+				hashdb = fmt.Sprintf("/tmp/%x.db", hash)
 			}
-			*/
+
 			// extract FORMAT from query and override the current `default_format`
 			cleanquery, format := extractAndRemoveFormat(query)
 			if len(format) > 0 {
@@ -354,11 +353,20 @@ func main() {
 			if len(query) == 0 {
 				_, _ = w.Write([]byte(staticPlay))
 			} else {
-				result, err := quack(query, false, default_format, default_params)
-				if err != nil {
-					_, _ = w.Write([]byte(err.Error()))
+				if (len(hashdb) > 0) {
+					result, err := quack(query, false, default_format, hashdb + "?"+ default_params)
+					if err != nil {
+						_, _ = w.Write([]byte(err.Error()))
+					} else {
+						_, _ = w.Write([]byte(result))
+					}
 				} else {
-					_, _ = w.Write([]byte(result))
+					result, err := quack(query, false, default_format, default_params)
+					if err != nil {
+						_, _ = w.Write([]byte(err.Error()))
+					} else {
+						_, _ = w.Write([]byte(result))
+					}
 				}
 			}
 		})
