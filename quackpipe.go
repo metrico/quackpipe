@@ -62,6 +62,7 @@ func quack(query string, stdin bool, format string, params string, hashdb string
 	defer db.Close()
 
 	if !stdin {
+		check(db.Exec("LOAD httpfs; LOAD json; LOAD parquet;"))
 		check(db.Exec("SET autoinstall_known_extensions=1;"))
                 check(db.Exec("SET autoload_known_extensions=1;"))
 	}
