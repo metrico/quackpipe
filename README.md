@@ -58,9 +58,16 @@ Run with `-h` for a full list of parameters
 <br>
 
 #### :point_right: Playground
-Execute queries using the embedded playground
+Execute stateless queries w/o persistence using the embedded playground
 
 <a href="https://quackpipe.fly.dev" target=_blank><img src="https://github.com/metrico/quackpipe/assets/1423657/fa0c8b8f-7480-4bd1-b8b2-bee24ee39186" width=800></a>
+
+##### 👉 Stateful Queries
+Execute stateful queries with data persistence by adding unique HTTP Authentication. No registration required.
+
+<a href="https://quackpipe.fly.dev" target=_blank><img src="https://github.com/metrico/quackpipe/assets/1423657/b0546f2a-fa0b-4cbf-b336-a6cdeaa86863" width=800></a>
+
+
 
 #### :point_right: API
 Execute queries using the POST API
