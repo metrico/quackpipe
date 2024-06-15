@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"bufio"
 	"database/sql"
 	_ "embed"
@@ -14,6 +15,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"crypto/sha256"
 
 	_ "github.com/marcboeker/go-duckdb" // load duckdb driver
 )
@@ -29,8 +31,10 @@ type CommandLineFlags struct {
 	Host   *string `json:"host"`
 	Port   *string `json:"port"`
 	Stdin  *bool   `json:"stdin"`
+	Alias  *bool   `json:"alias"`
 	Format *string `json:"format"`
 	Params *string `json:"params"`
+	DBPath *string `json:"dbpath"`
 }
 
 var appFlags CommandLineFlags
@@ -44,8 +48,13 @@ func check(args ...interface{}) {
 	}
 }
 
-func quack(query string, stdin bool, format string, params string) (string, error) {
+func quack(query string, stdin bool, format string, params string, hashdb string) (string, error) {
 	var err error
+	alias := *appFlags.Alias
+
+	if (len(hashdb) > 0) {
+		params = hashdb + "?" + params
+	}
 
 	db, err = sql.Open("duckdb", params)
 	if err != nil {
@@ -54,15 +63,17 @@ func quack(query string, stdin bool, format string, params string) (string, erro
 	defer db.Close()
 
 	if !stdin {
-		check(db.Exec("LOAD httpfs; LOAD json; LOAD parquet;"))
+		check(db.ExecContext(context.Background(),"LOAD httpfs; LOAD json; LOAD parquet;"))
+		check(db.ExecContext(context.Background(),"SET autoinstall_known_extensions=1;"))
+		check(db.ExecContext(context.Background(),"SET autoload_known_extensions=1;"))
 	}
-	
-	if staticAliases != "" {
-		check(db.Exec(staticAliases))
+
+	if (alias) && (staticAliases != "") {
+		check(db.ExecContext(context.Background(), staticAliases))
 	}
-	
+
 	startTime := time.Now()
-	rows, err := db.Query(query)
+	rows, err := db.QueryContext(context.Background(), query)
 	if err != nil {
 		return "", err
 	}
@@ -88,7 +99,9 @@ func initFlags() {
 	appFlags.Port = flag.String("port", "8123", "API port. Default 8123")
 	appFlags.Format = flag.String("format", "JSONCompact", "API port. Default JSONCompact")
 	appFlags.Params = flag.String("params", "", "DuckDB optional parameters. Default to none.")
+	appFlags.DBPath = flag.String("dbpath", "/tmp/", "DuckDB DB storage path. Default to /tmp/")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
+	appFlags.Alias = flag.Bool("alias", false, "Built-in CH Aliases. Default false")
 	flag.Parse()
 }
 
@@ -274,6 +287,8 @@ func main() {
 	initFlags()
 	default_format := *appFlags.Format
 	default_params := *appFlags.Params
+	default_path := *appFlags.DBPath
+
 	if *appFlags.Stdin {
 		scanner := bufio.NewScanner((os.Stdin))
 		query := ""
@@ -288,7 +303,7 @@ func main() {
 			query = cleanquery
 			default_format = format
 		}
-		result, err := quack(query, true, default_format, default_params)
+		result, err := quack(query, true, default_format, default_params, "")
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -325,7 +340,7 @@ func main() {
 			default:
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			}
-			
+
 			// format handling
 			if r.URL.Query().Get("default_format") != "" {
 				default_format = r.URL.Query().Get("default_format")
@@ -335,15 +350,13 @@ func main() {
 				default_params = r.URL.Query().Get("default_params")
 			}
 			// auth to hash based temp file storage
-			/*
 			username, password, ok := r.BasicAuth()
+			hashdb := ""
 			if ok && len(password) > 0 {
 				hash := sha256.Sum256([]byte(username + password))
-				hashdb, _ := fmt.Printf("/tmp/%x.db", hash)
-				repath := regexp.MustCompile(`(.*?)\?`)
-				default_params = repath.ReplaceAllString(default_params, repath+"?")
+				hashdb = fmt.Sprintf("%s/%x.db", default_path, hash)
 			}
-			*/
+
 			// extract FORMAT from query and override the current `default_format`
 			cleanquery, format := extractAndRemoveFormat(query)
 			if len(format) > 0 {
@@ -354,7 +367,7 @@ func main() {
 			if len(query) == 0 {
 				_, _ = w.Write([]byte(staticPlay))
 			} else {
-				result, err := quack(query, false, default_format, default_params)
+				result, err := quack(query, false, default_format, default_params, hashdb)
 				if err != nil {
 					_, _ = w.Write([]byte(err.Error()))
 				} else {
