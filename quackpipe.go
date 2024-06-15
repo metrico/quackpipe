@@ -30,8 +30,10 @@ type CommandLineFlags struct {
 	Host   *string `json:"host"`
 	Port   *string `json:"port"`
 	Stdin  *bool   `json:"stdin"`
+	Alias  *bool   `json:"alias"`
 	Format *string `json:"format"`
 	Params *string `json:"params"`
+	DBPath *string `json:"dbpath"`
 }
 
 var appFlags CommandLineFlags
@@ -45,8 +47,13 @@ func check(args ...interface{}) {
 	}
 }
 
-func quack(query string, stdin bool, format string, params string) (string, error) {
+func quack(query string, stdin bool, format string, params string, hashdb string) (string, error) {
 	var err error
+	alias := *appFlags.Alias
+
+	if (len(hashdb) > 0) {
+		params = hashdb + "?" + params
+	}
 
 	db, err = sql.Open("duckdb", params)
 	if err != nil {
@@ -54,11 +61,12 @@ func quack(query string, stdin bool, format string, params string) (string, erro
 	}
 	defer db.Close()
 
+
 	if !stdin {
 		check(db.Exec("LOAD httpfs; LOAD json; LOAD parquet;"))
 	}
 
-	if staticAliases != "" {
+	if (alias) && (staticAliases != "") {
 		check(db.Exec(staticAliases))
 	}
 
@@ -89,7 +97,9 @@ func initFlags() {
 	appFlags.Port = flag.String("port", "8123", "API port. Default 8123")
 	appFlags.Format = flag.String("format", "JSONCompact", "API port. Default JSONCompact")
 	appFlags.Params = flag.String("params", "", "DuckDB optional parameters. Default to none.")
+	appFlags.DBPath = flag.String("dbpath", "/tmp/", "DuckDB DB storage path. Default to /tmp.")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
+	appFlags.Alias = flag.Bool("alias", false, "Built-in Aliases. Slower. Default false")
 	flag.Parse()
 }
 
@@ -275,6 +285,8 @@ func main() {
 	initFlags()
 	default_format := *appFlags.Format
 	default_params := *appFlags.Params
+	default_path := *appFlags.DBPath
+
 	if *appFlags.Stdin {
 		scanner := bufio.NewScanner((os.Stdin))
 		query := ""
@@ -289,7 +301,7 @@ func main() {
 			query = cleanquery
 			default_format = format
 		}
-		result, err := quack(query, true, default_format, default_params)
+		result, err := quack(query, true, default_format, default_params, "")
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -340,7 +352,7 @@ func main() {
 			hashdb := ""
 			if ok && len(password) > 0 {
 				hash := sha256.Sum256([]byte(username + password))
-				hashdb = fmt.Sprintf("/tmp/%x.db", hash)
+				hashdb = fmt.Sprintf("%s/%x.db", default_path, hash)
 			}
 
 			// extract FORMAT from query and override the current `default_format`
@@ -353,20 +365,11 @@ func main() {
 			if len(query) == 0 {
 				_, _ = w.Write([]byte(staticPlay))
 			} else {
-				if (len(hashdb) > 0) {
-					result, err := quack(query, false, default_format, hashdb + "?"+ default_params)
-					if err != nil {
-						_, _ = w.Write([]byte(err.Error()))
-					} else {
-						_, _ = w.Write([]byte(result))
-					}
+				result, err := quack(query, false, default_format, default_params, hashdb)
+				if err != nil {
+					_, _ = w.Write([]byte(err.Error()))
 				} else {
-					result, err := quack(query, false, default_format, default_params)
-					if err != nil {
-						_, _ = w.Write([]byte(err.Error()))
-					} else {
-						_, _ = w.Write([]byte(result))
-					}
+					_, _ = w.Write([]byte(result))
 				}
 			}
 		})
