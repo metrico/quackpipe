@@ -61,9 +61,9 @@ func quack(query string, stdin bool, format string, params string, hashdb string
 	}
 	defer db.Close()
 
-
 	if !stdin {
-		check(db.Exec("LOAD httpfs; LOAD json; LOAD parquet;"))
+		check(db.Exec("SET autoinstall_known_extensions=1;"))
+                check(db.Exec("SET autoload_known_extensions=1;"))
 	}
 
 	if (alias) && (staticAliases != "") {
@@ -97,9 +97,9 @@ func initFlags() {
 	appFlags.Port = flag.String("port", "8123", "API port. Default 8123")
 	appFlags.Format = flag.String("format", "JSONCompact", "API port. Default JSONCompact")
 	appFlags.Params = flag.String("params", "", "DuckDB optional parameters. Default to none.")
-	appFlags.DBPath = flag.String("dbpath", "/tmp/", "DuckDB DB storage path. Default to /tmp.")
+	appFlags.DBPath = flag.String("dbpath", "/tmp/", "DuckDB DB storage path. Default to /tmp/")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
-	appFlags.Alias = flag.Bool("alias", false, "Built-in Aliases. Slower. Default false")
+	appFlags.Alias = flag.Bool("alias", false, "Built-in CH Aliases. Default false")
 	flag.Parse()
 }
 
