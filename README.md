@@ -44,6 +44,17 @@ curl -fsSL github.com/metrico/quackpipe/releases/latest/download/quackpipe-amd64
 ./quackpipe --port 8123 --params "/tmp/test.db?access_mode=READ_ONLY"
 ```
 
+##### 🔌 Start Server w/ Motherduck authentication token
+###### Using DuckDB Params
+```bash
+./quackpipe --port 8123 --params "/tmp/test.db?motherduck_token=YOUR_TOKEN_HERE"
+```
+###### Using System ENV
+```bash
+export motherduck_token='<token>'
+./quackpipe --port 8123 
+```
+
 Run with `-h` for a full list of parameters
 
 ##### Parameters
