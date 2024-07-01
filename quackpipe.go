@@ -51,6 +51,7 @@ func check(args ...interface{}) {
 func quack(query string, stdin bool, format string, params string, hashdb string) (string, error) {
 	var err error
 	alias := *appFlags.Alias
+	motherduck, md := os.LookupEnv("motherduck_token")
 
 	if (len(hashdb) > 0) {
 		params = hashdb + "?" + params
@@ -70,6 +71,10 @@ func quack(query string, stdin bool, format string, params string, hashdb string
 
 	if (alias) && (staticAliases != "") {
 		check(db.ExecContext(context.Background(), staticAliases))
+	}
+
+	if (md) && (motherduck != "") {
+		check(db.ExecContext(context.Background(), "LOAD motherduck; ATTACH 'md:';"))
 	}
 
 	startTime := time.Now()
