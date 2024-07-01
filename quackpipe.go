@@ -35,6 +35,7 @@ type CommandLineFlags struct {
 	Format *string `json:"format"`
 	Params *string `json:"params"`
 	DBPath *string `json:"dbpath"`
+	Motherduck *string `json:"motherduck"`
 }
 
 var appFlags CommandLineFlags
@@ -51,6 +52,7 @@ func check(args ...interface{}) {
 func quack(query string, stdin bool, format string, params string, hashdb string) (string, error) {
 	var err error
 	alias := *appFlags.Alias
+	motherduck := *appFlags.Motherduck
 
 	if (len(hashdb) > 0) {
 		params = hashdb + "?" + params
@@ -70,6 +72,10 @@ func quack(query string, stdin bool, format string, params string, hashdb string
 
 	if (alias) && (staticAliases != "") {
 		check(db.ExecContext(context.Background(), staticAliases))
+	}
+
+	if (motherduck != "") {
+		check(db.ExecContext(context.Background(), "LOAD motherduck; ATTACH 'md:';"))
 	}
 
 	startTime := time.Now()
@@ -102,7 +108,13 @@ func initFlags() {
 	appFlags.DBPath = flag.String("dbpath", "/tmp/", "DuckDB DB storage path. Default to /tmp/")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
 	appFlags.Alias = flag.Bool("alias", false, "Built-in CH Aliases. Default false")
+	appFlags.Motherduck = flag.String("motherduck", "", "Motherduck Auth Token. Defaults to none.")
 	flag.Parse()
+
+	// Motherduck ENV override
+	if envMother, exists := os.LookupEnv("motherduck_token"); exists {
+            fmt.Sscanf(envMother, "%s", appFlags.Motherduck)
+        }
 }
 
 // extractAndRemoveFormat extracts the FORMAT clause from the query and returns the query without the FORMAT clause
