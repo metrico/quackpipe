@@ -67,7 +67,7 @@ func quack(query string, stdin bool, format string, params string, hashdb string
 	}
 
 	if (alias) {
-		check(db.ExecContext(context.Background(), "INSTALL chsql FROM community; LOAD chsql;"))
+		check(db.ExecContext(context.Background(), "LOAD chsql;"))
 	}
 
 	if (md) && (motherduck != "") {
