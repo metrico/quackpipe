@@ -23,9 +23,6 @@ import (
 //go:embed play.html
 var staticPlay string
 
-//go:embed aliases.sql
-var staticAliases string
-
 // params for Flags
 type CommandLineFlags struct {
 	Host   *string `json:"host"`
@@ -69,8 +66,8 @@ func quack(query string, stdin bool, format string, params string, hashdb string
 		check(db.ExecContext(context.Background(),"SET autoload_known_extensions=1;"))
 	}
 
-	if (alias) && (staticAliases != "") {
-		check(db.ExecContext(context.Background(), staticAliases))
+	if (alias) {
+		check(db.ExecContext(context.Background(), "INSTALL chsql FROM community; LOAD chsql;"))
 	}
 
 	if (md) && (motherduck != "") {
@@ -106,7 +103,7 @@ func initFlags() {
 	appFlags.Params = flag.String("params", "", "DuckDB optional parameters. Default to none.")
 	appFlags.DBPath = flag.String("dbpath", "/tmp/", "DuckDB DB storage path. Default to /tmp/")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
-	appFlags.Alias = flag.Bool("alias", false, "Built-in CH Aliases. Default false")
+	appFlags.Alias = flag.Bool("alias", true, "Built-in CH Aliases. Default true")
 	flag.Parse()
 }
 
