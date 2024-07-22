@@ -1,9 +1,8 @@
-package root
+package handlers
 
 import (
 	_ "embed"
 	"fmt"
-	"github.com/gorilla/mux"
 	"io"
 	"net/http"
 	"quackpipe/controller/root"
@@ -18,12 +17,6 @@ type Handler struct {
 	FlagInformation *model.CommandLineFlags
 }
 
-// RootHandler function for the root endpoint
-func RootHandler(router *mux.Router, FlagInformation *model.CommandLineFlags) *Handler {
-	HandlerInfo := &Handler{FlagInformation: FlagInformation}
-	router.HandleFunc("/", HandlerInfo.Handlers).Methods("POST", "GET")
-	return HandlerInfo
-}
 func (u *Handler) Handlers(w http.ResponseWriter, r *http.Request) {
 	var bodyBytes []byte
 	var query string
