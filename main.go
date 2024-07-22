@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 	"quackpipe/model"
-	"quackpipe/route"
+	"quackpipe/router"
 	"quackpipe/utils"
 )
 
@@ -45,7 +45,7 @@ func main() {
 		}
 
 	} else {
-		r := route.NewRouter(appFlags)
+		r := router.NewRouter(appFlags)
 		fmt.Printf("QuackPipe API Running: %s:%s\n", *appFlags.Host, *appFlags.Port)
 		if err := http.ListenAndServe(*appFlags.Host+":"+*appFlags.Port, r); err != nil {
 			panic(err)

@@ -1,4 +1,4 @@
-package route
+package router
 
 import (
 	"github.com/gorilla/mux"
@@ -8,6 +8,6 @@ import (
 func NewRouter(flagInformation *model.CommandLineFlags) *mux.Router {
 	router := mux.NewRouter()
 	// Register  module routes
-	RootHandler(router, flagInformation)
+	APIHandler(router, flagInformation)
 	return router
 }

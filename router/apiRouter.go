@@ -1,4 +1,4 @@
-package route
+package router
 
 import (
 	"github.com/gorilla/mux"
@@ -6,8 +6,8 @@ import (
 	"quackpipe/model"
 )
 
-// RootHandler function for the root endpoint
-func RootHandler(router *mux.Router, FlagInformation *model.CommandLineFlags) handlers.Handler {
+// APIHandler function for the root endpoint
+func APIHandler(router *mux.Router, FlagInformation *model.CommandLineFlags) handlers.Handler {
 	HandlerInfo := handlers.Handler{FlagInformation: FlagInformation}
 	router.HandleFunc("/", HandlerInfo.Handlers).Methods("POST", "GET")
 	return HandlerInfo
