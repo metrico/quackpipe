@@ -2,16 +2,12 @@ package handlers
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"quackpipe/controller/root"
 	"quackpipe/model"
-)
-
-var (
-	EmptyQuery = errors.New("length of query is empty")
+	"quackpipe/utils"
 )
 
 //go:embed play.html
@@ -60,15 +56,22 @@ func (u *Handler) Handlers(w http.ResponseWriter, r *http.Request) {
 		defaultParams = r.URL.Query().Get("default_params")
 	}
 
-	result, err := root.QueryOperation(u.FlagInformation, query, r, defaultPath, defaultFormat, defaultParams)
-	if err != nil {
-		if !errors.Is(err, EmptyQuery) {
-			_, _ = w.Write([]byte(staticPlay))
-		} else {
-			_, _ = w.Write([]byte(err.Error()))
-		}
+	// extract FORMAT from query and override the current `default_format`
+	cleanQuery, format := utils.ExtractAndRemoveFormat(query)
+	if len(format) > 0 {
+		query = cleanQuery
+		defaultFormat = format
+	}
+	if len(query) == 0 {
+		_, _ = w.Write([]byte(staticPlay))
+
 	} else {
-		_, _ = w.Write([]byte(result))
+		result, err := root.QueryOperation(u.FlagInformation, query, r, defaultPath, defaultFormat, defaultParams)
+		if err != nil {
+			_, _ = w.Write([]byte(err.Error()))
+		} else {
+			_, _ = w.Write([]byte(result))
+		}
 	}
 
 }
