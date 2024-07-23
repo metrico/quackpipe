@@ -2,16 +2,19 @@ package handlers
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"quackpipe/controller/root"
 	"quackpipe/model"
-	"strings"
 )
 
 //go:embed play.html
 var staticPlay string
+var (
+	EmptyQuery = errors.New("length of query is empty")
+)
 
 type Handler struct {
 	FlagInformation *model.CommandLineFlags
@@ -57,11 +60,12 @@ func (u *Handler) Handlers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := root.QueryOperation(u.FlagInformation, query, r, defaultPath, defaultFormat, defaultParams)
-	if err != nil && strings.Contains(err.Error(), "") {
-		_, _ = w.Write([]byte(staticPlay))
-	}
 	if err != nil {
-		_, _ = w.Write([]byte(err.Error()))
+		if errors.Is(err, EmptyQuery) {
+			_, _ = w.Write([]byte(staticPlay))
+		} else {
+			_, _ = w.Write([]byte(err.Error()))
+		}
 	} else {
 		_, _ = w.Write([]byte(result))
 	}
