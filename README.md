@@ -105,6 +105,16 @@ echo "INSTALL httpfs;" | ./quackpipe --stdin --params "?extension_directory=/tmp
 ./quackpipe --port 8123 --host 0.0.0.0 --params "?extension_directory=/tmp/"
 ```
 
+### <img src="https://github.com/metrico/quackpipe/assets/1423657/f66fd8f8-a756-40a6-bee9-7979b09f2576" height=20 > ClickHouse HTTP
+
+Quackpipe can be used to query a remote instance of itself and/or ClickHouse using the HTTP API
+
+```sql
+CREATE OR REPLACE MACRO quackpipe(query, server := 'https://play.clickhouse.com', user := 'play', format := 'JSONEachRow') AS TABLE
+    SELECT * FROM read_json_auto(concat(server, '/?default_format=', format, '&user=', user, '&query=', query));
+
+SELECT * FROM quackpipe("SELECT number as once, number *2 as twice FROM numbers(10)")
+```
 
 ### <img src="https://github.com/metrico/quackpipe/assets/1423657/f66fd8f8-a756-40a6-bee9-7979b09f2576" height=20 > ClickHouse UDF
 
