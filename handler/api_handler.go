@@ -10,11 +10,12 @@ import (
 	"quackpipe/model"
 )
 
-//go:embed play.html
-var staticPlay string
 var (
 	EmptyQuery = errors.New("length of query is empty")
 )
+
+//go:embed play.html
+var staticPlay string
 
 type Handler struct {
 	FlagInformation *model.CommandLineFlags
@@ -61,7 +62,7 @@ func (u *Handler) Handlers(w http.ResponseWriter, r *http.Request) {
 
 	result, err := root.QueryOperation(u.FlagInformation, query, r, defaultPath, defaultFormat, defaultParams)
 	if err != nil {
-		if errors.Is(err, EmptyQuery) {
+		if !errors.Is(err, EmptyQuery) {
 			_, _ = w.Write([]byte(staticPlay))
 		} else {
 			_, _ = w.Write([]byte(err.Error()))
