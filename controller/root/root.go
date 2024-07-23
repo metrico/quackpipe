@@ -31,7 +31,7 @@ func QueryOperation(flagInformation *model.CommandLineFlags, query string, r *ht
 	}
 
 	if len(query) == 0 {
-		return "", errors.New("query length is empty")
+		return "", errors.New("")
 	} else {
 		rows, duration, err := db.Quack(*flagInformation, query, false, defaultParams, hashdb)
 		if err != nil {

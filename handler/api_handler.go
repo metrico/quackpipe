@@ -57,7 +57,7 @@ func (u *Handler) Handlers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := root.QueryOperation(u.FlagInformation, query, r, defaultPath, defaultFormat, defaultParams)
-	if err != nil && strings.Contains(err.Error(), "query length is empty") {
+	if err != nil && strings.Contains(err.Error(), "") {
 		_, _ = w.Write([]byte(staticPlay))
 	}
 	if err != nil {
