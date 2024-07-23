@@ -2,7 +2,10 @@ module quackpipe
 
 go 1.20
 
-require github.com/marcboeker/go-duckdb v1.7.0
+require (
+	github.com/gorilla/mux v1.8.1
+	github.com/marcboeker/go-duckdb v1.7.0
+)
 
 require (
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect

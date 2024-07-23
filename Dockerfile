@@ -1,7 +1,7 @@
 FROM golang:1.20 AS builder
 WORKDIR /
 COPY . .
-RUN CGO_ENABLED=1 go build -o quackpipe quackpipe.go
+RUN CGO_ENABLED=1 go build -o quackpipe .
 RUN strip quackpipe
 RUN apt update && apt install -y libgrpc-dev
   
