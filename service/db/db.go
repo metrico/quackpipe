@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	_ "github.com/marcboeker/go-duckdb" // load duckdb driver
 	"os"
 	"quackpipe/model"
 	"time"
