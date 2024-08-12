@@ -1,0 +1,14 @@
+onStart:
+  query:
+    - "CREATE TABLE IF NOT EXISTS experimental (
+                    ids INTEGER,
+                    name VARCHAR,
+                    value DOUBLE,
+                    timestamp TIMESTAMP
+                );"
+cronJobs:
+  - query:
+      - "COPY experimental FROM '/Users/mac/Documents/go/src/github.com/metrico/quackpipe/exp.csv' (FORMAT 'CSV');"
+      - "COPY experimental TO '/Users/mac/Documents/go/src/github.com/metrico/quackpipe/output.parquet' (FORMAT 'PARQUET');"
+    cron: "*/5 * * * *"
+httpPort: 9056

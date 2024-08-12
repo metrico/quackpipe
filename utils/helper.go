@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"quackpipe/model"
 	"regexp"
 	"strings"
@@ -198,4 +199,19 @@ func rowsToCSV(rows *sql.Rows, cols bool) (string, error) {
 	}
 
 	return strings.Join(result, "\n"), nil
+}
+
+func FileSaveLocal(body []byte) (string, error) {
+	// Create a temporary file to store JSON data
+	tmpfile, err := ioutil.TempFile("", "data-*.json")
+	if err != nil {
+		return "", err
+	}
+	defer tmpfile.Close()
+	// Write JSON data to the temporary file
+	_, err = tmpfile.Write(body)
+	if err != nil {
+		return "", err
+	}
+	return tmpfile.Name(), nil
 }

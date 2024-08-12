@@ -1,13 +1,23 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
+	"quackpipe/config"
 	"quackpipe/model"
 	"quackpipe/router"
 	"quackpipe/utils"
+	"sync"
+)
+
+var (
+	db     *sql.DB
+	dbOnce sync.Once
 )
 
 // initFlags initializes the command line flags
@@ -29,6 +39,44 @@ func initFlags() *model.CommandLineFlags {
 var appFlags *model.CommandLineFlags
 
 func main() {
+
+	// Load configuration
+	config, err := config.LoadConfig("/Users/mac/Documents/go/src/github.com/metrico/quackpipe/config/config.yml")
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	//go func() {
+	//	// Create a new cron instance
+	//	fmt.Println("goroutine trigger")
+	//	// Schedule jobs based on configuration
+	//	for _, job := range config.CronJobs {
+	//
+	//		fmt.Println("job trigger")
+	//		utils.ScheduleJob(job)
+	//	}
+	//
+	//}()
+	//
+	db := getDBInstance()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Fatalf("Failed to close database: %v", err)
+		}
+	}()
+
+	// Create a context with the database connection
+	ctx := context.WithValue(context.Background(), "db", db)
+	utils.ExecuteOnStartQueries(ctx, config.OnStart.Queries)
+
+	go func() {
+		for _, job := range config.CronJobs {
+
+			fmt.Println("job trigger")
+			utils.CronTrigger(ctx, job)
+		}
+	}()
+
 	appFlags = initFlags()
 	if *appFlags.Stdin {
 		rows, duration, format, err := utils.ReadFromScanner(*appFlags)
@@ -45,6 +93,7 @@ func main() {
 		}
 
 	} else {
+
 		r := router.NewRouter(appFlags)
 		fmt.Printf("QuackPipe API Running: %s:%s\n", *appFlags.Host, *appFlags.Port)
 		if err := http.ListenAndServe(*appFlags.Host+":"+*appFlags.Port, r); err != nil {
@@ -53,4 +102,15 @@ func main() {
 
 	}
 
+}
+
+func getDBInstance() *sql.DB {
+	dbOnce.Do(func() {
+		var err error
+		db, err = sql.Open("duckdb", "")
+		if err != nil {
+			log.Fatalf("Failed to open database: %v", err)
+		}
+	})
+	return db
 }

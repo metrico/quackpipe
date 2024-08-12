@@ -3,13 +3,19 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
+	"fmt"
 	_ "github.com/marcboeker/go-duckdb" // load duckdb driver
 	"os"
 	"quackpipe/model"
 	"time"
 )
 
-func Quack(appFlags model.CommandLineFlags, query string, stdin bool, params string, hashdb string) (*sql.Rows, time.Duration, error) {
+func Quack(appFlags model.CommandLineFlags, query string, jsonData []byte, stdin bool, params string, hashdb string) (*sql.Rows, time.Duration, error) {
+	fmt.Println("Quack Function Trigger.....")
+
+	// Register the in-memory JSON data as a virtual file
+
 	var err error
 	alias := *appFlags.Alias
 	motherduck, md := os.LookupEnv("motherduck_token")
@@ -18,6 +24,7 @@ func Quack(appFlags model.CommandLineFlags, query string, stdin bool, params str
 		params = hashdb + "?" + params
 	}
 
+	fmt.Println("params", params)
 	db, err := sql.Open("duckdb", params)
 	if err != nil {
 		return nil, 0, err
@@ -37,6 +44,16 @@ func Quack(appFlags model.CommandLineFlags, query string, stdin bool, params str
 	if (md) && (motherduck != "") {
 		check(db.ExecContext(context.Background(), "LOAD motherduck; ATTACH 'md:';"))
 	}
+
+	base64Json := base64.StdEncoding.EncodeToString(jsonData)
+	fmt.Println("Query Information", query)
+	// Modify the query to use the JSON data directly
+	jsonQuery := fmt.Sprintf("SELECT * FROM read_json_auto(base64_decode('%s'))", base64Json)
+
+	// Add the JSON query to the main query
+	query = query + " " + jsonQuery
+
+	fmt.Println("final Query", query)
 	startTime := time.Now()
 	rows, err := db.QueryContext(context.Background(), query)
 	if err != nil {
