@@ -32,6 +32,7 @@ func Quack(appFlags model.CommandLineFlags, query string, stdin bool, params str
 
 	if alias {
 		check(db.ExecContext(context.Background(), "LOAD chsql;"))
+		check(db.ExecContext(context.Background(), "CREATE OR REPLACE MACRO ch_scan(query, server := 'https://play.clickhouse.com', user := 'play', format := 'JSONEachRow') AS TABLE SELECT * FROM read_json_auto(concat(server, '/?default_format=', format, '&user=', user, '&query=', query));"))
 	}
 
 	if (md) && (motherduck != "") {
