@@ -3,10 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"quackpipe/model"
+	"quackpipe/repository"
 	"quackpipe/router"
+	"quackpipe/service/db"
 	"quackpipe/utils"
 )
 
@@ -29,6 +32,17 @@ func initFlags() *model.CommandLineFlags {
 var appFlags *model.CommandLineFlags
 
 func main() {
+
+	dbConn, err := db.ConnectDuckDB("test.db")
+	if err != nil {
+		log.Fatalf("failed to connect to DuckDB: %v", err)
+	}
+	defer dbConn.Close()
+	err = repository.CreateDuckDBTablesTable(dbConn)
+	if err != nil {
+		log.Fatalf("failed to create metadata table: %v", err)
+	}
+
 	appFlags = initFlags()
 	if *appFlags.Stdin {
 		rows, duration, format, err := utils.ReadFromScanner(*appFlags)
