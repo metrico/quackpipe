@@ -11,7 +11,7 @@ import (
 
 func Quack(appFlags model.CommandLineFlags, query string, stdin bool, params string, hashdb string) (*sql.Rows, time.Duration, error) {
 	var err error
-	alias := *appFlags.Alias
+
 	motherduck, md := os.LookupEnv("motherduck_token")
 
 	if len(hashdb) > 0 {
@@ -29,7 +29,7 @@ func Quack(appFlags model.CommandLineFlags, query string, stdin bool, params str
 		check(db.ExecContext(context.Background(), "SET autoinstall_known_extensions=1;"))
 		check(db.ExecContext(context.Background(), "SET autoload_known_extensions=1;"))
 	}
-	
+
 	check(db.ExecContext(context.Background(), "LOAD chsql;"))
 	if (md) && (motherduck != "") {
 		check(db.ExecContext(context.Background(), "LOAD motherduck; ATTACH 'md:';"))
