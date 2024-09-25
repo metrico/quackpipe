@@ -92,7 +92,7 @@ curl -X POST https://quackpipe.fly.dev
 Execute queries using STDIN
 ```
 # echo "SELECT 'hello', version() as version FORMAT CSV" | ./quackpipe --stdin
-hello,v0.7.1
+hello,v1.1.1
 ```
 
 ### :fist_right: Extensions
