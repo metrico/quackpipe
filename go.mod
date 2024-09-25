@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/marcboeker/go-duckdb v1.8.0
+	github.com/marcboeker/go-duckdb v1.8.1
 )
 
 require (
