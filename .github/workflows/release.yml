@@ -23,7 +23,7 @@ jobs:
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         goversion: "https://dl.google.com/go/go1.23.1.linux-amd64.tar.gz"
-        pre_command: export CGO_ENABLED=1
+        pre_command: export CGO_ENABLED=1 && go mod tidy
         project_path: "."
         binary_name: "quackpipe"
         asset_name: quackpipe-${{ matrix.goarch }}
