@@ -6,7 +6,7 @@ toolchain go1.22.5
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/marcboeker/go-duckdb v1.8.1
+	github.com/marcboeker/go-duckdb v1.8.2
 )
 
 require (
