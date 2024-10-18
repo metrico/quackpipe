@@ -122,6 +122,52 @@ func rowsToJSON(rows *sql.Rows, elapsedTime time.Duration) (string, error) {
 	return string(jsonData), nil
 }
 
+// rowsToNDJSON converts the rows to NDJSON strings
+func rowsToNDJSON(rows *sql.Rows) (string, error) {
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return "", err
+	}
+	var ndjsonBuffer strings.Builder
+	for rows.Next() {
+		values := make([]interface{}, len(columns))
+		for i := range columns {
+			values[i] = new(interface{})
+		}
+
+		err := rows.Scan(values...)
+		if err != nil {
+			return "", err
+		}
+
+		rowData := make(map[string]interface{})
+		for i, column := range columns {
+			// Convert the value to the appropriate Go type
+			switch v := (*(values[i].(*interface{}))).(type) {
+			case []byte:
+				rowData[column] = string(v)
+			default:
+				rowData[column] = v
+			}
+		}
+
+		rowJSON, err := json.Marshal(rowData)
+		if err != nil {
+			return "", err
+		}
+
+		ndjsonBuffer.WriteString(string(rowJSON) + "\n")
+	}
+
+	if err = rows.Err(); err != nil {
+		return "", err
+	}
+
+	return ndjsonBuffer.String(), nil
+}
+
 // rowsToTSV converts the rows to TSV string
 func rowsToTSV(rows *sql.Rows, cols bool) (string, error) {
 	var result []string
