@@ -30,6 +30,12 @@ func ConversationOfRows(rows *sql.Rows, default_format string, duration time.Dur
 			return "", err
 		}
 		return result, nil
+	case "JSONEachRow", "NDJSON":
+		result, err := rowsToNDJSON(rows, duration)
+		if err != nil {
+			return "", err
+		}
+		return result, nil
 	case "CSVWithNames":
 		result, err := rowsToCSV(rows, true)
 		if err != nil {
