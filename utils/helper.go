@@ -31,7 +31,7 @@ func ConversationOfRows(rows *sql.Rows, default_format string, duration time.Dur
 		}
 		return result, nil
 	case "JSONEachRow", "NDJSON":
-		result, err := rowsToNDJSON(rows, duration)
+		result, err := rowsToNDJSON(rows)
 		if err != nil {
 			return "", err
 		}
