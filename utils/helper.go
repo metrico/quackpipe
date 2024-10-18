@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"bytes"
 	"quackpipe/model"
 	"regexp"
 	"strings"
@@ -26,6 +27,12 @@ func ConversationOfRows(rows *sql.Rows, default_format string, duration time.Dur
 	switch default_format {
 	case "JSONCompact", "JSON":
 		result, err := rowsToJSON(rows, duration)
+		if err != nil {
+			return "", err
+		}
+		return result, nil
+	case "JSONEachRow", "NDJSON":
+		result, err := rowsToNDJSON(rows)
 		if err != nil {
 			return "", err
 		}
@@ -120,6 +127,55 @@ func rowsToJSON(rows *sql.Rows, elapsedTime time.Duration) (string, error) {
 	}
 
 	return string(jsonData), nil
+}
+
+// rowsToNDJSON converts the rows to NDJSON strings
+func rowsToNDJSON(rows *sql.Rows) (string, error) {
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return "", err
+	}
+
+	var buffer bytes.Buffer
+	values := make([]interface{}, len(columns))
+	scanArgs := make([]interface{}, len(columns))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+
+	for rows.Next() {
+		err := rows.Scan(scanArgs...)
+		if err != nil {
+			return "", err
+		}
+
+		rowMap := make(map[string]interface{})
+		for i, col := range columns {
+			val := values[i]
+			b, ok := val.([]byte)
+			if ok {
+				rowMap[col] = string(b)
+			} else {
+				rowMap[col] = val
+			}
+		}
+
+		jsonData, err := json.Marshal(rowMap)
+		if err != nil {
+			return "", err
+		}
+
+		buffer.Write(jsonData)
+		buffer.WriteByte('\n')
+	}
+
+	if err = rows.Err(); err != nil {
+		return "", err
+	}
+
+	return buffer.String(), nil
 }
 
 // rowsToTSV converts the rows to TSV string
