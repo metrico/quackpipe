@@ -176,6 +176,7 @@ func rowsToNDJSON(rows *sql.Rows) (string, error) {
 	}
 
 	return buffer.String(), nil
+}
 
 // rowsToTSV converts the rows to TSV string
 func rowsToTSV(rows *sql.Rows, cols bool) (string, error) {
