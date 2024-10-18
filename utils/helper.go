@@ -136,43 +136,45 @@ func rowsToNDJSON(rows *sql.Rows) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var ndjsonBuffer strings.Builder
-	for rows.Next() {
-		values := make([]interface{}, len(columns))
-		for i := range columns {
-			values[i] = new(interface{})
-		}
 
-		err := rows.Scan(values...)
+	var buffer bytes.Buffer
+	values := make([]interface{}, len(columns))
+	scanArgs := make([]interface{}, len(columns))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+
+	for rows.Next() {
+		err := rows.Scan(scanArgs...)
 		if err != nil {
 			return "", err
 		}
 
-		rowData := make(map[string]interface{})
-		for i, column := range columns {
-			// Convert the value to the appropriate Go type
-			switch v := (*(values[i].(*interface{}))).(type) {
-			case []byte:
-				rowData[column] = string(v)
-			default:
-				rowData[column] = v
+		rowMap := make(map[string]interface{})
+		for i, col := range columns {
+			val := values[i]
+			b, ok := val.([]byte)
+			if ok {
+				rowMap[col] = string(b)
+			} else {
+				rowMap[col] = val
 			}
 		}
 
-		rowJSON, err := json.Marshal(rowData)
+		jsonData, err := json.Marshal(rowMap)
 		if err != nil {
 			return "", err
 		}
 
-		ndjsonBuffer.WriteString(string(rowJSON) + "\n")
+		buffer.Write(jsonData)
+		buffer.WriteByte('\n')
 	}
 
 	if err = rows.Err(); err != nil {
 		return "", err
 	}
 
-	return ndjsonBuffer.String(), nil
-}
+	return buffer.String(), nil
 
 // rowsToTSV converts the rows to TSV string
 func rowsToTSV(rows *sql.Rows, cols bool) (string, error) {
