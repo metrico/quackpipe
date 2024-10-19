@@ -1,0 +1,4 @@
+quack_pipe:
+  root: /tmp/data
+  merge_timeout_s: 10
+  secret: q1w2e3r4t5

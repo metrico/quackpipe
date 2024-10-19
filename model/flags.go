@@ -9,4 +9,5 @@ type CommandLineFlags struct {
 	Format *string `json:"format"`
 	Params *string `json:"params"`
 	DBPath *string `json:"dbpath"`
+	Config *string `json:"config"`
 }
