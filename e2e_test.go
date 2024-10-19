@@ -19,7 +19,7 @@ func TestE2E(t *testing.T) {
 			Enabled:       true,
 			Root:          "_testdata",
 			MergeTimeoutS: 10,
-			Secret:        "q1w2e3r4t5",
+			Secret:        "XXXXXX",
 		},
 		DBPath: "_testdata",
 	}

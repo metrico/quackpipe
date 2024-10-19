@@ -13,7 +13,7 @@ func TestMerge(t *testing.T) {
 			Enabled:       true,
 			Root:          ".",
 			MergeTimeoutS: 10,
-			Secret:        "q1w2e3r4t5",
+			Secret:        "XXXXXX",
 		},
 		DBPath: ".",
 	}
