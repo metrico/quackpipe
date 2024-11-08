@@ -17,6 +17,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4.1.1
+    - name: Go Mod 
+      run: go mod tidy
     - uses: lmangani/go-release-action@v1.37-ubuntu
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
