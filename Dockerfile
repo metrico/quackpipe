@@ -8,5 +8,5 @@ RUN apt update && apt install -y libgrpc-dev
 FROM debian:12
 COPY --from=builder /quackpipe /quackpipe
 COPY --from=builder /usr/share/grpc/roots.pem /usr/share/grpc/roots.pem
-RUN echo "INSTALL httpfs; INSTALL json; INSTALL parquet; INSTALL motherduck; INSTALL fts; INSTALL chsql FROM community;" | /quackpipe --stdin
+RUN echo "INSTALL httpfs; INSTALL json; INSTALL parquet; INSTALL motherduck; INSTALL fts; INSTALL chsql FROM community;  INSTALL chsql_native FROM community;" | /quackpipe --stdin
 CMD ["/quackpipe"]
