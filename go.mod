@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/marcboeker/go-duckdb v1.8.3
-	github.com/prometheus/client_golang v1.20.4
+	github.com/prometheus/client_golang v1.20.5
 	github.com/spf13/viper v1.18.1
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/btree v1.7.0
