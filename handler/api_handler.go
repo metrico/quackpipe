@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"quackpipe/config"
 	"quackpipe/controller/root"
-	"quackpipe/model"
 	"quackpipe/utils"
 )
 
@@ -14,16 +14,15 @@ import (
 var staticPlay string
 
 type Handler struct {
-	FlagInformation *model.CommandLineFlags
 }
 
-func (u *Handler) Handlers(w http.ResponseWriter, r *http.Request) {
+func (u *Handler) Handlers(w http.ResponseWriter, r *http.Request) error {
 	var bodyBytes []byte
 	var query string
 	var err error
-	defaultFormat := *u.FlagInformation.Format
-	defaultParams := *u.FlagInformation.Params
-	defaultPath := *u.FlagInformation.DBPath
+	defaultFormat := *config.AppFlags.Format
+	defaultParams := *config.AppFlags.Params
+	defaultPath := *config.AppFlags.DBPath
 	// handle query parameter
 	if r.URL.Query().Get("query") != "" {
 		query = r.URL.Query().Get("query")
@@ -31,7 +30,7 @@ func (u *Handler) Handlers(w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err = io.ReadAll(r.Body)
 		if err != nil {
 			fmt.Printf("Body reading error: %v", err)
-			return
+			return nil
 		}
 		defer r.Body.Close()
 		query = string(bodyBytes)
@@ -66,12 +65,12 @@ func (u *Handler) Handlers(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(staticPlay))
 
 	} else {
-		result, err := root.QueryOperation(u.FlagInformation, query, r, defaultPath, defaultFormat, defaultParams)
+		result, err := root.QueryOperation(config.AppFlags, query, r, defaultPath, defaultFormat, defaultParams)
 		if err != nil {
 			_, _ = w.Write([]byte(err.Error()))
 		} else {
 			_, _ = w.Write([]byte(result))
 		}
 	}
-
+	return nil
 }
