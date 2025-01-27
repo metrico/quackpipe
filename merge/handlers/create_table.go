@@ -5,8 +5,6 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"net/http"
-	"path/filepath"
-	"quackpipe/config"
 	"quackpipe/merge/repository"
 	"quackpipe/model"
 )
@@ -54,7 +52,6 @@ func CreateTableHandler(w http.ResponseWriter, r *http.Request) error {
 
 	table := model.Table{
 		Name:               req.CreateTable,
-		Path:               filepath.Join(config.Config.QuackPipe.Root, req.CreateTable),
 		Fields:             fields,
 		Engine:             req.Engine,
 		OrderBy:            req.OrderBy,

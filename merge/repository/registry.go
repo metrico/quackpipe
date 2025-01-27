@@ -9,6 +9,7 @@ import (
 	"quackpipe/merge/service"
 	"quackpipe/model"
 	"quackpipe/service/db"
+	"regexp"
 	"sync"
 	"time"
 )
@@ -68,7 +69,13 @@ func RunMerge() {
 	}
 }
 
+var tableNameCheck = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+
 func RegisterNewTable(table *model.Table) error {
+	if !tableNameCheck.MatchString(table.Name) {
+		return fmt.Errorf("invalid table name, only letters and _ are accepted: %q", table.Name)
+	}
+	table.Path = filepath.Join(config.Config.QuackPipe.Root, table.Name)
 	if _, ok := registry[table.Name]; ok {
 		return nil
 	}
@@ -139,6 +146,9 @@ FROM tables
 }
 
 func createTableFolders(table *model.Table) error {
+	if !tableNameCheck.MatchString(table.Name) {
+		return fmt.Errorf("invalid table name, only letters and _ are accepted: %q", table.Name)
+	}
 	err := os.MkdirAll(filepath.Join(table.Path, "tmp"), 0755)
 	if err != nil {
 		return err
