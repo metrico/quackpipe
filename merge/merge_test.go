@@ -15,7 +15,6 @@ func TestMerge(t *testing.T) {
 			MergeTimeoutS: 10,
 			Secret:        "XXXXXX",
 		},
-		DBPath: ".",
 	}
 	Init()
 	err := repository.RegisterNewTable(&model.Table{

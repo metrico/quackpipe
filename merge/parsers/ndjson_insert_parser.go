@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/go-faster/jx"
 	"io"
-	"quackpipe/merge/shared"
+	"quackpipe/merge/data_types"
 )
 
 type NDJSONParser struct {
@@ -53,16 +53,7 @@ func (N *NDJSONParser) ParseReader(r io.Reader) (chan *ParserResponse, error) {
 func (N *NDJSONParser) resetLines() {
 	N.lines = make(map[string]any)
 	for k, v := range N.fields {
-		switch v {
-		case shared.TYPE_STRING:
-			N.lines[k] = make([]string, 0)
-		case shared.TYPE_INT64:
-			N.lines[k] = make([]int64, 0)
-		case shared.TYPE_UINT64:
-			N.lines[k] = make([]uint64, 0)
-		case shared.TYPE_FLOAT64:
-			N.lines[k] = make([]float64, 0)
-		}
+		N.lines[k] = data_types.DataTypes[v].MakeStore()
 	}
 }
 
@@ -73,49 +64,10 @@ func (N *NDJSONParser) parseLine(line []byte) error {
 		if !ok {
 			return fmt.Errorf("field %s not found", key)
 		}
-		switch tp {
-		case shared.TYPE_STRING:
-			str, err := d.Str()
-			if err != nil {
-				return err
-			}
-			if _, ok := N.lines[key].([]string); !ok {
-				return fmt.Errorf("field %s is not a string", key)
-			}
-			N.lines[key] = append(N.lines[key].([]string), str)
-		case shared.TYPE_INT64:
-			str, err := d.Int64()
-			if err != nil {
-				return err
-			}
-			field := N.lines[key]
-			if _, ok := field.([]int64); !ok {
-				return fmt.Errorf("field %s is not a string", key)
-			}
-			field = append(field.([]int64), str)
-			N.lines[key] = field
-		case shared.TYPE_UINT64:
-			str, err := d.UInt64()
-			if err != nil {
-				return err
-			}
-			field := N.lines[key]
-			if _, ok := field.([]uint64); !ok {
-				return fmt.Errorf("field %s is not a string", key)
-			}
-			field = append(field.([]uint64), str)
-			N.lines[key] = field
-		case shared.TYPE_FLOAT64:
-			str, err := d.Float64()
-			if err != nil {
-				return err
-			}
-			field := N.lines[key]
-			if _, ok := field.([]float64); !ok {
-				return fmt.Errorf("field %s is not a string", key)
-			}
-			field = append(field.([]float64), str)
-			N.lines[key] = field
+		var err error
+		N.lines[key], err = data_types.DataTypes[tp].ParseJson(d, N.lines[key])
+		if err != nil {
+			return fmt.Errorf("invalid data for field %s: %w", key, err)
 		}
 		return nil
 	})

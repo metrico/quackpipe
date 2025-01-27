@@ -16,6 +16,7 @@ import (
 	"golang.org/x/sync/semaphore"
 	"os"
 	"path/filepath"
+	"quackpipe/merge/data_types"
 	"quackpipe/model"
 	"quackpipe/service/db"
 	"quackpipe/utils/promise"
@@ -65,16 +66,7 @@ func NewMergeTreeService(t *model.Table) *MergeTreeService {
 func (s *MergeTreeService) createDataStore() map[string]any {
 	res := make(map[string]any)
 	for _, f := range s.Table.Fields {
-		switch f[1] {
-		case "UInt64":
-			res[f[0]] = make([]uint64, 0, 1000000)
-		case "Int64":
-			res[f[0]] = make([]int64, 0, 1000000)
-		case "String":
-			res[f[0]] = make([]string, 0, 1000000)
-		case "Float64":
-			res[f[0]] = make([]float64, 0, 1000000)
-		}
+		res[f[0]] = data_types.DataTypes[f[1]].MakeStore()
 	}
 	return res
 }
@@ -95,23 +87,8 @@ func getFieldType(t *model.Table, fieldName string) string {
 func (s *MergeTreeService) Less(a, b int32) bool {
 	for _, o := range s.Table.OrderBy {
 		t := getFieldType(s.Table, o)
-		switch t {
-		case "UInt64":
-			if s.dataStore[o].([]uint64)[a] > s.dataStore[o].([]uint64)[b] {
-				return false
-			}
-		case "Int64":
-			if s.dataStore[o].([]int64)[a] > s.dataStore[o].([]int64)[b] {
-				return false
-			}
-		case "String":
-			if s.dataStore[o].([]string)[a] > s.dataStore[o].([]string)[b] {
-				return false
-			}
-		case "Float64":
-			if s.dataStore[o].([]float64)[a] > s.dataStore[o].([]float64)[b] {
-				return false
-			}
+		if !data_types.DataTypes[t].Less(s.dataStore[o], a, b) {
+			return false
 		}
 	}
 	return true
@@ -166,25 +143,13 @@ func validateData(table *model.Table, columns map[string]any) error {
 			return fmt.Errorf("invalid column: %s", column)
 		}
 		// Validate data types for each column
-		switch columnType {
-		case "UInt64":
-			if _, ok := data.([]uint64); !ok {
-				return fmt.Errorf("invalid data type for column %s: expected uint64", column)
-			}
-		case "Int64":
-			if _, ok := data.([]int64); !ok {
-				return fmt.Errorf("invalid data type for column %s: expected int64", column)
-			}
-		case "String":
-			if _, ok := data.([]string); !ok {
-				return fmt.Errorf("invalid data type for column %s: expected string", column)
-			}
-		case "Float64":
-			if _, ok := data.([]float64); !ok {
-				return fmt.Errorf("invalid data type for column %s: expected float64", column)
-			}
-		default:
+		t, ok := data_types.DataTypes[columnType]
+		if !ok {
 			return fmt.Errorf("unsupported column type: %s", columnType)
+		}
+		err := t.ValidateData(data)
+		if err != nil {
+			return fmt.Errorf("invalid data for column %s: %w", column, err)
 		}
 	}
 
@@ -194,19 +159,7 @@ func validateData(table *model.Table, columns map[string]any) error {
 func (s *MergeTreeService) createParquetSchema() *arrow.Schema {
 	fields := make([]arrow.Field, len(s.Table.Fields))
 	for i, field := range s.Table.Fields {
-		var fieldType arrow.DataType
-		switch field[1] {
-		case "UInt64":
-			fieldType = arrow.PrimitiveTypes.Uint64
-		case "Int64":
-			fieldType = arrow.PrimitiveTypes.Int64
-		case "String":
-			fieldType = arrow.BinaryTypes.String
-		case "Float64":
-			fieldType = arrow.PrimitiveTypes.Float64
-		default:
-			panic(fmt.Sprintf("unsupported field type: %s", field[1]))
-		}
+		var fieldType = data_types.DataTypes[field[1]].ArrowDataType()
 		fields[i] = arrow.Field{Name: field[0], Type: fieldType}
 	}
 	return arrow.NewSchema(fields, nil)
@@ -218,24 +171,13 @@ func (s *MergeTreeService) writeParquetFile(columns map[string]any) *promise.Pro
 	var oldSize, newSize int32
 	for k, v := range columns {
 		tp := getFieldType(s.Table, k)
-		switch tp {
-		case "UInt64":
-			oldSize = int32(len(s.dataStore[k].([]uint64)))
-			s.dataStore[k] = append(s.dataStore[k].([]uint64), v.([]uint64)...)
-			newSize = int32(len(s.dataStore[k].([]uint64)))
-		case "Int64":
-			oldSize = int32(len(s.dataStore[k].([]int64)))
-			s.dataStore[k] = append(s.dataStore[k].([]int64), v.([]int64)...)
-			newSize = int32(len(s.dataStore[k].([]int64)))
-		case "String":
-			oldSize = int32(len(s.dataStore[k].([]string)))
-			s.dataStore[k] = append(s.dataStore[k].([]string), v.([]string)...)
-			newSize = int32(len(s.dataStore[k].([]string)))
-		case "Float64":
-			oldSize = int32(len(s.dataStore[k].([]float64)))
-			s.dataStore[k] = append(s.dataStore[k].([]float64), v.([]float64)...)
-			newSize = int32(len(s.dataStore[k].([]float64)))
+		var err error
+		oldSize = int32(GetColumnLength(s.dataStore[k]))
+		s.dataStore[k], err = data_types.DataTypes[tp].AppendStore(s.dataStore[k], v)
+		if err != nil {
+			return promise.Fulfilled[int32](err, 0)
 		}
+		newSize = int32(GetColumnLength(s.dataStore[k]))
 	}
 	for i := oldSize; i < newSize; i++ {
 		s.dataIndexes.Set(i)
@@ -265,28 +207,10 @@ func (s *MergeTreeService) flush() {
 		return
 	}
 	for i, f := range s.Table.Fields {
-		it := indexes.Iter()
-		switch f[1] {
-		case "UInt64":
-			_data := dataStore[f[0]].([]uint64)
-			for it.Next() {
-				s.recordBatch.Field(i).(*array.Uint64Builder).Append(_data[it.Item()])
-			}
-		case "Int64":
-			_data := dataStore[f[0]].([]int64)
-			for it.Next() {
-				s.recordBatch.Field(i).(*array.Int64Builder).Append(_data[it.Item()])
-			}
-		case "String":
-			_data := dataStore[f[0]].([]string)
-			for it.Next() {
-				s.recordBatch.Field(i).(*array.StringBuilder).Append(_data[it.Item()])
-			}
-		case "Float64":
-			_data := dataStore[f[0]].([]float64)
-			for it.Next() {
-				s.recordBatch.Field(i).(*array.Float64Builder).Append(_data[it.Item()])
-			}
+		err := data_types.DataTypes[f[1]].WriteToBatch(s.recordBatch.Field(i), dataStore[f[0]], indexes)
+		if err != nil {
+			onError(err)
+			return
 		}
 	}
 	record := s.recordBatch.NewRecord()
