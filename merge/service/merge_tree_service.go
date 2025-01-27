@@ -486,49 +486,28 @@ func mergeFiles(table *model.Table, p *PlanMerge, tmpDir, dataDir string) error 
 	if err != nil {
 		return err
 	}
-	conn.Exec("LOAD '/home/hromozeka/QXIP/quackpipe/chsql.duckdb_extension'")
-	conn.Exec("INSTALL '/home/hromozeka/QXIP/quackpipe/chsql.duckdb_extension'")
+	_, err = conn.Exec("INSTALL chsql FROM community")
+	if err != nil {
+		fmt.Println("Error loading chsql extension: ", err)
+		return err
+	}
+	_, err = conn.Exec("LOAD chsql")
+	if err != nil {
+		fmt.Println("Error loading chsql extension: ", err)
+		return err
+	}
 	defer conn.Close()
 
-	//// Drop the table if it exists
-	//dropTableSQL := `DROP TABLE IF EXISTS temp_table`
-	//_, err = conn.Exec(dropTableSQL)
-	//if err != nil {
-	//	return err
-	//}
+	createTableSQL := fmt.Sprintf(
+		`COPY(SELECT * FROM read_parquet_mergetree(ARRAY['%s'], '%s'))TO '%s' (FORMAT 'parquet')`,
+		strings.Join(p.From, "','"),
+		strings.Join(table.OrderBy, ","), tmpFilePath)
+	_, err = conn.Exec(createTableSQL)
 
-	if p.Iteration == 1 {
-		createTableSQL := fmt.Sprintf(
-			`COPY(SELECT * FROM read_parquet_ordered (ARRAY['%s'], '%s'))TO '%s' (FORMAT 'parquet')`,
-			strings.Join(p.From, "','"),
-			strings.Join(table.OrderBy, ","), tmpFilePath)
-		_, err = conn.Exec(createTableSQL)
-		if err != nil {
-			return err
-		}
-	} else {
-		createTableSQL := fmt.Sprintf(
-			`COPY(SELECT * FROM read_parquet_ordered (ARRAY['%s'], '%s'))TO '%s' (FORMAT 'parquet')`,
-			strings.Join(p.From, "','"),
-			strings.Join(table.OrderBy, ","), tmpFilePath)
-		_, err = conn.Exec(createTableSQL)
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		fmt.Println("Error read_parquet_mergetree: ", err)
+		return err
 	}
-
-	// Create a temporary table in DuckDB using parquet_scan with an array of files
-
-	//// Perform the merge
-	//mergeSQL := fmt.Sprintf(
-	//	`COPY (SELECT * FROM temp_table ORDER BY %s) TO '%s' (FORMAT 'parquet')`,
-	//	strings.Join(table.OrderBy, ","),
-	//	tmpFilePath,
-	//)
-	//_, err = conn.Exec(mergeSQL)
-	//if err != nil {
-	//	return err
-	//}
 
 	// Cleanup old files
 	for _, file := range p.From {
