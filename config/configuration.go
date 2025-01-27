@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"github.com/spf13/viper"
+	"strings"
 )
 
 type QuackPipeConfiguration struct {
@@ -13,21 +15,31 @@ type QuackPipeConfiguration struct {
 
 type Configuration struct {
 	QuackPipe QuackPipeConfiguration `json:"quack_pipe" mapstructure:"quack_pipe" default:""`
-	DBPath    string                 `json:"db_path" mapstructure:"db_path" default:"/tmp/db"`
 }
 
 var Config *Configuration
 
 func InitConfig(file string) {
-	viper.SetConfigFile(file)
+
+	viper.SetEnvPrefix("")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
-	err := viper.ReadInConfig()
-	if err != nil {
-		panic(err)
+	// If a file is provided, use it as the config file
+	if file != "" {
+		viper.SetConfigFile(file)
+		err := viper.ReadInConfig()
+		if err != nil {
+			panic(fmt.Errorf("error reading config file: %s", err))
+		}
+		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	} else {
+		fmt.Println("Using environment variables for configuration")
 	}
+
 	Config = &Configuration{}
-	err = viper.Unmarshal(Config)
+	err := viper.Unmarshal(Config)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("unable to decode into struct: %s", err))
 	}
+	fmt.Printf("Loaded configuration: %+v\n", Config)
 }

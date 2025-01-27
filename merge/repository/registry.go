@@ -22,7 +22,7 @@ var registryMtx sync.Mutex
 func InitRegistry(_conn *sql.DB) error {
 	var err error
 	if _conn == nil {
-		_conn, err = db.ConnectDuckDB(config.Config.DBPath + "/ddb.db")
+		_conn, err = db.ConnectDuckDB(config.Config.QuackPipe.Root + "/ddb.db")
 		if err != nil {
 			return err
 		}

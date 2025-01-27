@@ -1,4 +1,4 @@
-FROM golang:1.20 AS builder
+FROM golang:1.23 AS builder
 WORKDIR /
 COPY . .
 RUN CGO_ENABLED=1 go build -o quackpipe .

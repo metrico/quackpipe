@@ -19,7 +19,7 @@ func initFlags() *model.CommandLineFlags {
 	appFlags.Host = flag.String("host", "0.0.0.0", "API host. Default 0.0.0.0")
 	appFlags.Port = flag.String("port", "8123", "API port. Default 8123")
 	appFlags.Format = flag.String("format", "JSONCompact", "API port. Default JSONCompact")
-	appFlags.Config = flag.String("config", "config.yaml", "path to the configuration file")
+	appFlags.Config = flag.String("config", "", "path to the configuration file")
 	appFlags.Params = flag.String("params", "", "DuckDB optional parameters. Default to none.")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
 	appFlags.Alias = flag.Bool("alias", false, "Built-in CH Aliases. Default true")
@@ -43,7 +43,7 @@ func main() {
 		} else {
 			fmt.Println(results)
 		}
-
+		return
 	}
 	config.InitConfig(*config.AppFlags.Config)
 	if config.Config.QuackPipe.Enabled {

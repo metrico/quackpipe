@@ -1,8 +1,6 @@
 module quackpipe
 
-go 1.21
-
-toolchain go1.21.3
+go 1.23
 
 require (
 	github.com/apache/arrow/go/v18 v18.0.0-20240829005432-58415d1fac50
@@ -11,7 +9,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/marcboeker/go-duckdb v1.8.0
 	github.com/prometheus/client_golang v1.20.4
-	github.com/spf13/viper v1.19.0
+	github.com/spf13/viper v1.18.1
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/btree v1.7.0
 	golang.org/x/sync v0.8.0

@@ -1,6 +1,7 @@
 package merge
 
 import (
+	"os"
 	"quackpipe/config"
 	"quackpipe/merge/handlers"
 	"quackpipe/merge/repository"
@@ -9,7 +10,11 @@ import (
 )
 
 func Init() {
-	conn, err := db.ConnectDuckDB(config.Config.DBPath + "/ddb.db")
+	err := os.MkdirAll(config.Config.QuackPipe.Root, 0750)
+	if err != nil {
+		panic(err)
+	}
+	conn, err := db.ConnectDuckDB(config.Config.QuackPipe.Root + "/ddb.db")
 	if err != nil {
 		panic(err)
 	}
