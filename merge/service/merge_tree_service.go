@@ -295,7 +295,7 @@ func (s *MergeTreeService) flush() {
 		onError(nil)
 		return
 	}
-	fileName := s.Table.Name + uuid.New().String() + ".1.parquet"
+	fileName := uuid.New().String() + ".1.parquet"
 	outputTmpFile := filepath.Join(s.Table.Path, "data", fileName)
 	outputFile := filepath.Join(s.Table.Path, "data", fileName)
 	file, err := os.Create(outputTmpFile)
