@@ -2,7 +2,7 @@ module quackpipe
 
 go 1.23
 
-toolchain go1.23
+toolchain go1.23.0
 
 require (
 	github.com/apache/arrow/go/v18 v18.0.0-20240829005432-58415d1fac50
