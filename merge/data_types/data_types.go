@@ -31,6 +31,7 @@ var DataTypes = map[string]DataType{
 	"FLOAT8":  Float64{},
 
 	"String":  String{},
+	"STRING":  String{},
 	"VARCHAR": String{},
 	"CHAR":    String{},
 	"BPCHAR":  String{},
