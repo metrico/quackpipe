@@ -2,14 +2,14 @@ module quackpipe
 
 go 1.23
 
-toolchain go1.23.0
+toolchain go1.23.2
 
 require (
 	github.com/apache/arrow/go/v18 v18.0.0-20240829005432-58415d1fac50
 	github.com/go-faster/jx v1.1.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/marcboeker/go-duckdb v1.8.0
+	github.com/marcboeker/go-duckdb v1.8.3
 	github.com/prometheus/client_golang v1.20.4
 	github.com/spf13/viper v1.18.1
 	github.com/stretchr/testify v1.9.0

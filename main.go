@@ -22,7 +22,7 @@ func initFlags() *model.CommandLineFlags {
 	appFlags.Config = flag.String("config", "", "path to the configuration file")
 	appFlags.Params = flag.String("params", "", "DuckDB optional parameters. Default to none.")
 	appFlags.Stdin = flag.Bool("stdin", false, "STDIN query. Default false")
-	appFlags.Alias = flag.Bool("alias", false, "Built-in CH Aliases. Default true")
+	appFlags.Alias = flag.Bool("alias", true, "Built-in CH Aliases. Default true")
 	flag.Parse()
 
 	return appFlags

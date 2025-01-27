@@ -1,6 +1,6 @@
-<a href="https://quackpipe.fly.dev" target="_blank"><img src="https://user-images.githubusercontent.com/1423657/231310060-aae46ee6-c748-44c9-905e-20a4eba0a814.png" width=220 /></a>
+<a href="https://quackpipe.fly.dev" target="_blank"><img src="https://github.com/user-attachments/assets/790afacb-96d9-4cdf-af48-1948049e0385" width=220 /></a>
 
-> _a pipe for quackheads_
+> _a data pipe for quackheads_
 
 # :baby_chick: quackpipe
 
@@ -92,7 +92,41 @@ curl -X POST https://quackpipe.fly.dev
 Execute queries using STDIN
 ```
 # echo "SELECT 'hello', version() as version FORMAT CSV" | ./quackpipe --stdin
-hello,v0.7.1
+hello,v1.1.1
+```
+
+### :fist_right: Clickhouse SQL (chsql)
+Quackpipe speaks a little ClickHouse SQL using the [chsql](https://community-extensions.duckdb.org/extensions/chsql.html) DuckDB Extension providing users with [100+ ClickHouse SQL Command Macros](https://community-extensions.duckdb.org/extensions/chsql.html#added-functions) two clients _(HTTP/S and Native)_ to interact with remote ClickHouse APIs
+
+#### Example
+```sql
+--- Install and load chsql
+D INSTALL chsql FROM community;
+D LOAD chsql;
+
+--- Use any of the 100+ ClickHouse Function Macros
+D SELECT IPv4StringToNum('127.0.0.1'), IPv4NumToString(2130706433);
+┌──────────────────────────────┬─────────────────────────────┐
+│ ipv4stringtonum('127.0.0.1') │ ipv4numtostring(2130706433) │
+│            int32             │           varchar           │
+├──────────────────────────────┼─────────────────────────────┤
+│                   2130706433 │ 127.0.0.1                   │
+└──────────────────────────────┴─────────────────────────────┘
+```
+
+### Remote Queries
+The built-in `ch_scan` function can be used to query remote ClickHouse servers using the HTTP/s API
+```sql
+--- Set optional X-Header Authentication
+D CREATE SECRET extra_http_headers (
+      TYPE HTTP,
+      EXTRA_HTTP_HEADERS MAP{
+          'X-ClickHouse-User': 'user',
+          'X-ClickHouse-Key': 'password'
+      }
+  );
+--- Query using the HTTP API
+D SELECT * FROM ch_scan("SELECT number * 2 FROM numbers(10)", "https://play.clickhouse.com");
 ```
 
 ### :fist_right: Extensions

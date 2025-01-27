@@ -29,10 +29,9 @@ func Quack(appFlags model.CommandLineFlags, query string, stdin bool, params str
 		check(db.ExecContext(context.Background(), "LOAD httpfs; LOAD json; LOAD parquet;"))
 		check(db.ExecContext(context.Background(), "SET autoinstall_known_extensions=1;"))
 		check(db.ExecContext(context.Background(), "SET autoload_known_extensions=1;"))
-	}
-
-	if alias {
-		check(db.ExecContext(context.Background(), "LOAD chsql;"))
+		if alias {
+			check(db.ExecContext(context.Background(), "LOAD chsql; LOAD chsql_native;"))
+		}
 	}
 
 	if (md) && (motherduck != "") {
