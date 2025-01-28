@@ -75,7 +75,9 @@ func RegisterNewTable(table *model.Table) error {
 	if !tableNameCheck.MatchString(table.Name) {
 		return fmt.Errorf("invalid table name, only letters and _ are accepted: %q", table.Name)
 	}
-	table.Path = filepath.Join(config.Config.QuackPipe.Root, table.Name)
+	if table.Path == "" {
+		table.Path = filepath.Join(config.Config.QuackPipe.Root, table.Name)
+	}
 	if _, ok := registry[table.Name]; ok {
 		return nil
 	}
@@ -97,9 +99,12 @@ func RegisterNewTable(table *model.Table) error {
 		return err
 	}
 	registryMtx.Lock()
-	registry[table.Name] = service.NewMergeTreeService(table)
+	defer registryMtx.Unlock()
+	registry[table.Name], err = service.NewMergeTreeService(table)
+	if err != nil {
+		return err
+	}
 	registry[table.Name].Run()
-	registryMtx.Unlock()
 	return nil
 }
 
@@ -134,12 +139,14 @@ FROM tables
 		for _, n := range orderBy {
 			table.OrderBy = append(table.OrderBy, n.(string))
 		}
-		func() {
-			registryMtx.Lock()
-			defer registryMtx.Unlock()
-			registry[table.Name] = service.NewMergeTreeService(&table)
-			registry[table.Name].Run()
-		}()
+		registryMtx.Lock()
+		registry[table.Name], err = service.NewMergeTreeService(&table)
+		if err != nil {
+			registryMtx.Unlock()
+			return err
+		}
+		registry[table.Name].Run()
+		registryMtx.Unlock()
 	}
 	return nil
 

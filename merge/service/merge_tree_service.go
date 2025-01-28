@@ -7,15 +7,14 @@ import (
 	"github.com/apache/arrow/go/v18/arrow"
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/apache/arrow/go/v18/arrow/memory"
-	"github.com/apache/arrow/go/v18/parquet"
-	"github.com/apache/arrow/go/v18/parquet/pqarrow"
-	"github.com/google/uuid"
 	_ "github.com/marcboeker/go-duckdb"
 	"github.com/tidwall/btree"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
+	url2 "net/url"
 	"os"
 	"path/filepath"
+	"quackpipe/config"
 	"quackpipe/merge/data_types"
 	"quackpipe/model"
 	"quackpipe/service/db"
@@ -39,28 +38,77 @@ type MergeTreeService struct {
 	ticker            *time.Ticker
 	working           uint32
 	promises          []*promise.Promise[int32]
-	recordBatch       *array.RecordBuilder
 	mtx               sync.Mutex
-	schema            *arrow.Schema
+	save              saveService
 	lastIterationTime [3]time.Time
 	dataIndexes       *btree.BTreeG[int32]
 	dataStore         map[string]any
 }
 
-func NewMergeTreeService(t *model.Table) *MergeTreeService {
+func NewMergeTreeService(t *model.Table) (*MergeTreeService, error) {
 	res := &MergeTreeService{
-		Table:       t,
-		working:     0,
-		promises:    []*promise.Promise[int32]{},
-		recordBatch: nil,
+		Table:    t,
+		working:  0,
+		promises: []*promise.Promise[int32]{},
 	}
 	res.dataStore = res.createDataStore()
 	res.dataIndexes = btree.NewBTreeG(res.Less)
-	res.schema = res.createParquetSchema()
-	pool := memory.NewGoAllocator()
-	res.recordBatch = array.NewRecordBuilder(pool, res.schema)
+	var err error
+	path := t.Path
+	if path == "" {
+		path = filepath.Join(config.Config.QuackPipe.Root, t.Name)
+	}
+	res.save, err = res.newSaveService(path)
+	return res, err
+}
 
-	return res
+func (s *MergeTreeService) newSaveService(path string) (saveService, error) {
+	if strings.HasPrefix(path, "s3://") {
+		return s.newS3SaveService(path)
+	}
+	return s.newFileSaveService(path)
+}
+
+func (s *MergeTreeService) newFileSaveService(path string) (saveService, error) {
+	schema := s.createParquetSchema()
+	return &fsSaveService{
+		path:        path,
+		recordBatch: array.NewRecordBuilder(memory.NewGoAllocator(), schema),
+		schema:      schema,
+	}, nil
+}
+
+func (s *MergeTreeService) newS3SaveService(path string) (saveService, error) {
+	url, err := url2.Parse(path)
+	if err != nil {
+		return nil, err
+	}
+	if url.Scheme != "s3" {
+		return nil, errors.New("invalid S3 URL")
+	}
+	pass, _ := url.User.Password()
+	bucketPath := strings.SplitN(strings.TrimPrefix(url.Path, "/"), "/", 2)
+	secure := !(url.Query().Get("secure") == "false")
+	region := ""
+	if url.Query().Get("region") != "" {
+		region = url.Query().Get("region")
+	}
+	schema := s.createParquetSchema()
+	res := &s3SaveService{
+		fsSaveService: fsSaveService{
+			path:        "",
+			recordBatch: array.NewRecordBuilder(memory.NewGoAllocator(), schema),
+			schema:      schema,
+		},
+		url:    url.Host,
+		key:    url.User.Username(),
+		secret: pass,
+		bucket: bucketPath[0],
+		region: region,
+		path:   bucketPath[1],
+		secure: secure,
+	}
+	return res, nil
 }
 
 func (s *MergeTreeService) createDataStore() map[string]any {
@@ -165,29 +213,6 @@ func (s *MergeTreeService) createParquetSchema() *arrow.Schema {
 	return arrow.NewSchema(fields, nil)
 }
 
-func (s *MergeTreeService) writeParquetFile(columns map[string]any) *promise.Promise[int32] {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-	var oldSize, newSize int32
-	for k, v := range columns {
-		tp := getFieldType(s.Table, k)
-		var err error
-		oldSize = int32(GetColumnLength(s.dataStore[k]))
-		s.dataStore[k], err = data_types.DataTypes[tp].AppendStore(s.dataStore[k], v)
-		if err != nil {
-			return promise.Fulfilled[int32](err, 0)
-		}
-		newSize = int32(GetColumnLength(s.dataStore[k]))
-	}
-	for i := oldSize; i < newSize; i++ {
-		s.dataIndexes.Set(i)
-	}
-
-	p := promise.New[int32]()
-	s.promises = append(s.promises, p)
-	return p
-}
-
 func (s *MergeTreeService) flush() {
 	s.mtx.Lock()
 	dataStore := s.dataStore
@@ -206,47 +231,8 @@ func (s *MergeTreeService) flush() {
 		onError(nil)
 		return
 	}
-	for i, f := range s.Table.Fields {
-		err := data_types.DataTypes[f[1]].WriteToBatch(s.recordBatch.Field(i), dataStore[f[0]], indexes)
-		if err != nil {
-			onError(err)
-			return
-		}
-	}
-	record := s.recordBatch.NewRecord()
-	defer record.Release()
-	if record.Column(0).Data().Len() == 0 {
-		onError(nil)
-		return
-	}
-	fileName := uuid.New().String() + ".1.parquet"
-	outputTmpFile := filepath.Join(s.Table.Path, "data", fileName)
-	outputFile := filepath.Join(s.Table.Path, "data", fileName)
-	file, err := os.Create(outputTmpFile)
-	if err != nil {
-		onError(err)
-		return
-	}
-	defer file.Close()
-	// Set up Parquet writer properties
-	writerProps := parquet.NewWriterProperties(
-		parquet.WithMaxRowGroupLength(100),
-	)
-	arrprops := pqarrow.NewArrowWriterProperties()
-
-	// Create Parquet file writer
-	writer, err := pqarrow.NewFileWriter(s.schema, file, writerProps, arrprops)
-	if err != nil {
-		onError(err)
-		return
-	}
-	defer writer.Close()
-	err = writer.Write(record)
-	if err != nil {
-		onError(err)
-		return
-	}
-	onError(os.Rename(outputTmpFile, outputFile))
+	err := s.save.Save(s.Table.Fields, dataStore, indexes)
+	onError(err)
 }
 
 func (s *MergeTreeService) Run() {
@@ -256,7 +242,7 @@ func (s *MergeTreeService) Run() {
 		return
 	}
 	go func() {
-		s.ticker = time.NewTicker(time.Millisecond * 100)
+		s.ticker = time.NewTicker(time.Millisecond * time.Duration(config.Config.QuackPipe.SaveTimeoutS*1000))
 		for range s.ticker.C {
 			s.flush()
 		}
@@ -269,9 +255,9 @@ func (s *MergeTreeService) Stop() {
 	if s.ticker != nil {
 		s.ticker.Stop()
 	}
-	if s.recordBatch != nil {
+	/*if s.recordBatch != nil {
 		s.recordBatch.Release()
-	}
+	}*/
 	atomic.StoreUint32(&s.working, 0)
 }
 
@@ -280,7 +266,28 @@ func (s *MergeTreeService) Store(columns map[string]any) *promise.Promise[int32]
 		return promise.Fulfilled(err, int32(0))
 	}
 
-	return s.writeParquetFile(columns)
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	var oldSize, newSize int32
+	for k, v := range columns {
+		tp := getFieldType(s.Table, k)
+
+		var err error
+		oldSize = int32(GetColumnLength(s.dataStore[k]))
+		s.dataStore[k], err = data_types.DataTypes[tp].AppendStore(s.dataStore[k], v)
+		if err != nil {
+			return promise.Fulfilled[int32](err, 0)
+		}
+		newSize = int32(GetColumnLength(s.dataStore[k]))
+	}
+	for i := oldSize; i < newSize; i++ {
+		s.dataIndexes.Set(i)
+	}
+
+	p := promise.New[int32]()
+	s.promises = append(s.promises, p)
+	return p
 }
 
 type PlanMerge struct {

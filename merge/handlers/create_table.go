@@ -5,8 +5,10 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"net/http"
+	"quackpipe/config"
 	"quackpipe/merge/repository"
 	"quackpipe/model"
+	"strings"
 )
 
 type TimestampField struct {
@@ -21,6 +23,7 @@ type CreateTableRequest struct {
 	OrderBy     []string          `json:"order_by" yaml:"order_by"`
 	Timestamp   TimestampField    `json:"timestamp" yaml:"timestamp"`
 	PartitionBy string            `json:"partition_by" yaml:"partition_by"`
+	S3Url       string            `json:"s3_url" yaml:"s3_url"`
 }
 
 func CreateTableHandler(w http.ResponseWriter, r *http.Request) error {
@@ -50,6 +53,16 @@ func CreateTableHandler(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("field %s does not exist", req.Timestamp.Field)
 	}
 
+	if !config.Config.QuackPipe.AllowSaveToHD {
+		if req.S3Url == "" {
+			return fmt.Errorf("s3_url is required")
+		}
+
+	}
+	if req.S3Url != "" && !strings.HasPrefix(req.S3Url, "s3://") {
+		return fmt.Errorf("s3_url must start with s3://")
+	}
+
 	table := model.Table{
 		Name:               req.CreateTable,
 		Fields:             fields,
@@ -58,6 +71,7 @@ func CreateTableHandler(w http.ResponseWriter, r *http.Request) error {
 		TimestampField:     req.Timestamp.Field,
 		TimestampPrecision: req.Timestamp.Precision,
 		PartitionBy:        req.PartitionBy,
+		Path:               req.S3Url,
 	}
 	err = repository.RegisterNewTable(&table)
 	if err != nil {
