@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/apache/arrow/go/v18/arrow"
@@ -9,17 +8,13 @@ import (
 	"github.com/apache/arrow/go/v18/arrow/memory"
 	_ "github.com/marcboeker/go-duckdb"
 	"github.com/tidwall/btree"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 	url2 "net/url"
-	"os"
+	"path"
 	"path/filepath"
 	"quackpipe/config"
 	"quackpipe/merge/data_types"
 	"quackpipe/model"
-	"quackpipe/service/db"
 	"quackpipe/utils/promise"
-	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -40,6 +35,7 @@ type MergeTreeService struct {
 	promises          []*promise.Promise[int32]
 	mtx               sync.Mutex
 	save              saveService
+	merge             mergeService
 	lastIterationTime [3]time.Time
 	dataIndexes       *btree.BTreeG[int32]
 	dataStore         map[string]any
@@ -59,7 +55,39 @@ func NewMergeTreeService(t *model.Table) (*MergeTreeService, error) {
 		path = filepath.Join(config.Config.QuackPipe.Root, t.Name)
 	}
 	res.save, err = res.newSaveService(path)
+	if err != nil {
+		return nil, err
+	}
+	res.merge, err = res.newMergeService()
 	return res, err
+}
+
+func (s *MergeTreeService) newMergeService() (mergeService, error) {
+	if strings.HasPrefix(s.Table.Path, "s3://") {
+		return s.newS3MergeService()
+	}
+	return s.newFileMergeService()
+}
+
+func (s *MergeTreeService) newFileMergeService() (mergeService, error) {
+	return &fsMergeService{
+		path:  s.Table.Path,
+		table: s.Table,
+	}, nil
+}
+
+func (s *MergeTreeService) newS3MergeService() (mergeService, error) {
+	s3Conf, err := s.getS3Config(s.Table.Path)
+	if err != nil {
+		return nil, err
+	}
+	return &s3MergeService{
+		fsMergeService: fsMergeService{
+			path:  path.Join(config.Config.QuackPipe.Root, s.Table.Name, "tmp"),
+			table: s.Table,
+		},
+		s3Config: s3Conf,
+	}, nil
 }
 
 func (s *MergeTreeService) newSaveService(path string) (saveService, error) {
@@ -78,13 +106,13 @@ func (s *MergeTreeService) newFileSaveService(path string) (saveService, error) 
 	}, nil
 }
 
-func (s *MergeTreeService) newS3SaveService(path string) (saveService, error) {
+func (s *MergeTreeService) getS3Config(path string) (s3Config, error) {
 	url, err := url2.Parse(path)
 	if err != nil {
-		return nil, err
+		return s3Config{}, err
 	}
 	if url.Scheme != "s3" {
-		return nil, errors.New("invalid S3 URL")
+		return s3Config{}, errors.New("invalid S3 URL")
 	}
 	pass, _ := url.User.Password()
 	bucketPath := strings.SplitN(strings.TrimPrefix(url.Path, "/"), "/", 2)
@@ -93,13 +121,7 @@ func (s *MergeTreeService) newS3SaveService(path string) (saveService, error) {
 	if url.Query().Get("region") != "" {
 		region = url.Query().Get("region")
 	}
-	schema := s.createParquetSchema()
-	res := &s3SaveService{
-		fsSaveService: fsSaveService{
-			path:        "",
-			recordBatch: array.NewRecordBuilder(memory.NewGoAllocator(), schema),
-			schema:      schema,
-		},
+	return s3Config{
 		url:    url.Host,
 		key:    url.User.Username(),
 		secret: pass,
@@ -107,6 +129,22 @@ func (s *MergeTreeService) newS3SaveService(path string) (saveService, error) {
 		region: region,
 		path:   bucketPath[1],
 		secure: secure,
+	}, nil
+}
+
+func (s *MergeTreeService) newS3SaveService(path string) (saveService, error) {
+	s3Conf, err := s.getS3Config(path)
+	if err != nil {
+		return nil, err
+	}
+	schema := s.createParquetSchema()
+	res := &s3SaveService{
+		fsSaveService: fsSaveService{
+			path:        "",
+			recordBatch: array.NewRecordBuilder(memory.NewGoAllocator(), schema),
+			schema:      schema,
+		},
+		s3Config: s3Conf,
 	}
 	return res, nil
 }
@@ -255,9 +293,6 @@ func (s *MergeTreeService) Stop() {
 	if s.ticker != nil {
 		s.ticker.Stop()
 	}
-	/*if s.recordBatch != nil {
-		s.recordBatch.Release()
-	}*/
 	atomic.StoreUint32(&s.working, 0)
 }
 
@@ -301,156 +336,32 @@ type FileDesc struct {
 	size int64
 }
 
-func (s *MergeTreeService) planMerge(dataDir string) ([]PlanMerge, error) {
-	files, err := os.ReadDir(dataDir)
-	if err != nil {
-		return nil, err
+func (s *MergeTreeService) planMerge() ([]PlanMerge, error) {
+	var res []PlanMerge
+	// configuration - timeout_s - max_res_size_bytes - iteration_id
+	configurations := [][3]int64{
+		{10, 40 * 1024 * 1024, 1},
+		{100, 400 * 1024 * 1024, 2},
+		{1000, 4000 * 1024 * 1024, 3},
 	}
-	var parquetFiles []FileDesc
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), ".parquet") {
-			name := filepath.Join(dataDir, file.Name())
-			stat, err := os.Stat(name)
+	for _, conf := range configurations {
+		if time.Now().Sub(s.lastIterationTime[0]).Seconds() > float64(conf[0]) {
+			files, err := s.merge.GetFilesToMerge(int(conf[2]))
 			if err != nil {
 				return nil, err
 			}
-			parquetFiles = append(parquetFiles, struct {
-				name string
-				size int64
-			}{name, stat.Size()})
+			plans := s.merge.PlanMerge(files, conf[1], int(conf[2]))
+			res = append(res, plans...)
 		}
-	}
-	sort.Slice(parquetFiles, func(a, b int) bool {
-		return parquetFiles[a].size > parquetFiles[b].size
-	})
-	res := make([]PlanMerge, 0)
-	if time.Now().Sub(s.lastIterationTime[0]).Seconds() > 10 {
-		var _res []PlanMerge
-		parquetFiles, _res = s._planMerge(parquetFiles, 40*1024*1024, 40*1024*1024, 1)
-		res = append(res, _res...)
-		s.lastIterationTime[0] = time.Now()
-	}
-	if time.Now().Sub(s.lastIterationTime[1]).Seconds() > 100 {
-		var _res []PlanMerge
-		parquetFiles, _res = s._planMerge(parquetFiles, 400*1024*1024, 400*1024*1024, 2)
-		res = append(res, _res...)
-		s.lastIterationTime[1] = time.Now()
-	}
-	if time.Now().Sub(s.lastIterationTime[2]).Seconds() > 1000 {
-		var _res []PlanMerge
-		parquetFiles, _res = s._planMerge(parquetFiles, 4000*1024*1024, 4000*1024*1024, 3)
-		res = append(res, _res...)
-		s.lastIterationTime[2] = time.Now()
 	}
 	return res, nil
 }
 
-func checkSuffix(name string, iteration int) bool {
-	for i := iteration + 1; i >= 1; i-- {
-		if strings.HasSuffix(name, fmt.Sprintf("%d.parquet", i)) {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *MergeTreeService) _planMerge(parquetFiles []FileDesc, maxFileSize int64,
-	maxResSize int64, iteration int) ([]FileDesc, []PlanMerge) {
-	res := make([]PlanMerge, 1)
-	res[0].To = fmt.Sprintf("%s_%d.%d.parquet", s.Table.Name, time.Now().UnixNano(), iteration+1)
-	res[0].Iteration = iteration
-	mergeSize := int64(0)
-	for i := len(parquetFiles) - 1; i >= 0; i-- {
-		if !checkSuffix(parquetFiles[i].name, iteration) {
-			continue
-		}
-		if parquetFiles[i].size > maxFileSize {
-			break
-		}
-		mergeSize += parquetFiles[i].size
-		res[len(res)-1].From = append(res[len(res)-1].From, parquetFiles[i].name)
-		if mergeSize > maxResSize {
-			res = append(res, PlanMerge{
-				From:      nil,
-				To:        fmt.Sprintf("%s_%d.%d.parquet", s.Table.Name, time.Now().UnixNano(), iteration+1),
-				Iteration: iteration,
-			})
-			mergeSize = 0
-		}
-		parquetFiles = parquetFiles[:i]
-	}
-	for len(res) > 0 && len(res[len(res)-1].From) < 1 {
-		res = res[:len(res)-1]
-	}
-	return parquetFiles, res
-}
-
 // Merge method implementation
 func (s *MergeTreeService) Merge() error {
-	dataDir := filepath.Join(s.Table.Path, "data")
-	tmpDir := filepath.Join(s.Table.Path, "tmp")
-
-	plan, err := s.planMerge(dataDir)
+	plan, err := s.planMerge()
 	if err != nil {
 		return err
 	}
-	sem := semaphore.NewWeighted(10)
-	wg := errgroup.Group{}
-	for _, p := range plan {
-		_p := p
-		wg.Go(func() error {
-			sem.Acquire(context.Background(), 1)
-			defer sem.Release(1)
-			return mergeFiles(s.Table, &_p, tmpDir, dataDir)
-		})
-	}
-	return nil
-}
-
-func mergeFiles(table *model.Table, p *PlanMerge, tmpDir, dataDir string) error {
-	// Create a temporary merged file
-	tmpFilePath := filepath.Join(tmpDir, p.To)
-
-	// Prepare DuckDB connection
-
-	conn, err := db.ConnectDuckDB("?allow_unsigned_extensions=1")
-	if err != nil {
-		return err
-	}
-	_, err = conn.Exec("INSTALL chsql FROM community")
-	if err != nil {
-		fmt.Println("Error loading chsql extension: ", err)
-		return err
-	}
-	_, err = conn.Exec("LOAD chsql")
-	if err != nil {
-		fmt.Println("Error loading chsql extension: ", err)
-		return err
-	}
-	defer conn.Close()
-
-	createTableSQL := fmt.Sprintf(
-		`COPY(SELECT * FROM read_parquet_mergetree(ARRAY['%s'], '%s'))TO '%s' (FORMAT 'parquet')`,
-		strings.Join(p.From, "','"),
-		strings.Join(table.OrderBy, ","), tmpFilePath)
-	_, err = conn.Exec(createTableSQL)
-
-	if err != nil {
-		fmt.Println("Error read_parquet_mergetree: ", err)
-		return err
-	}
-
-	// Cleanup old files
-	for _, file := range p.From {
-		if err := os.Remove(file); err != nil {
-			return err
-		}
-	}
-
-	finalFilePath := filepath.Join(dataDir, p.To)
-	if err := os.Rename(tmpFilePath, finalFilePath); err != nil {
-		return err
-	}
-
-	return nil
+	return s.merge.DoMerge(plan)
 }

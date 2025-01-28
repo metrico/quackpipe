@@ -12,8 +12,7 @@ import (
 	"github.com/tidwall/btree"
 )
 
-type s3SaveService struct {
-	fsSaveService
+type s3Config struct {
 	url    string
 	key    string
 	secret string
@@ -21,6 +20,11 @@ type s3SaveService struct {
 	region string
 	path   string
 	secure bool
+}
+
+type s3SaveService struct {
+	fsSaveService
+	s3Config
 }
 
 func (s *s3SaveService) Save(fields [][2]string, data map[string]any, index *btree.BTreeG[int32]) error {
@@ -66,7 +70,7 @@ func (s *s3SaveService) uploadToS3(filePath string) error {
 	fileName := path.Base(filePath)
 
 	// Create the S3 key (path in the bucket)
-	s3Key := path.Join(s.path, fileName)
+	s3Key := path.Join(s.s3Config.path, fileName)
 
 	// Upload the file to S3
 	_, err = minioClient.PutObject(context.Background(), s.bucket, s3Key, file, fileInfo.Size(), minio.PutObjectOptions{
