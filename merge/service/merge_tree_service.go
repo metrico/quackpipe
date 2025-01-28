@@ -106,6 +106,23 @@ func (s *MergeTreeService) newFileSaveService(path string) (saveService, error) 
 	}, nil
 }
 
+func (s *MergeTreeService) newS3SaveService(path string) (saveService, error) {
+	s3Conf, err := s.getS3Config(path)
+	if err != nil {
+		return nil, err
+	}
+	schema := s.createParquetSchema()
+	res := &s3SaveService{
+		fsSaveService: fsSaveService{
+			path:        "",
+			recordBatch: array.NewRecordBuilder(memory.NewGoAllocator(), schema),
+			schema:      schema,
+		},
+		s3Config: s3Conf,
+	}
+	return res, nil
+}
+
 func (s *MergeTreeService) getS3Config(path string) (s3Config, error) {
 	url, err := url2.Parse(path)
 	if err != nil {
@@ -130,23 +147,6 @@ func (s *MergeTreeService) getS3Config(path string) (s3Config, error) {
 		path:   bucketPath[1],
 		secure: secure,
 	}, nil
-}
-
-func (s *MergeTreeService) newS3SaveService(path string) (saveService, error) {
-	s3Conf, err := s.getS3Config(path)
-	if err != nil {
-		return nil, err
-	}
-	schema := s.createParquetSchema()
-	res := &s3SaveService{
-		fsSaveService: fsSaveService{
-			path:        "",
-			recordBatch: array.NewRecordBuilder(memory.NewGoAllocator(), schema),
-			schema:      schema,
-		},
-		s3Config: s3Conf,
-	}
-	return res, nil
 }
 
 func (s *MergeTreeService) createDataStore() map[string]any {
