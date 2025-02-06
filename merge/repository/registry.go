@@ -37,7 +37,9 @@ func InitRegistry(_conn *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	go RunMerge()
+	if !config.Config.QuackPipe.NoMerges {
+		go RunMerge()
+	}
 	return nil
 }
 
@@ -61,7 +63,12 @@ func RunMerge() {
 			}
 		}()
 		for _, table := range _registry {
-			err := table.Merge()
+			plan, err := table.PlanMerge()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			err = table.Merge(plan)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -75,8 +82,13 @@ func RegisterNewTable(table *model.Table) error {
 	if !tableNameCheck.MatchString(table.Name) {
 		return fmt.Errorf("invalid table name, only letters and _ are accepted: %q", table.Name)
 	}
-	if table.Path == "" {
-		table.Path = filepath.Join(config.Config.QuackPipe.Root, table.Name)
+	if table.FSPath == "" {
+		table.FSPath = filepath.Join(config.Config.QuackPipe.Root, table.Name)
+	}
+	for i := range table.Paths {
+		if table.Paths[i] == "" {
+			table.Paths[i] = filepath.Join(table.FSPath)
+		}
 	}
 	if _, ok := registry[table.Name]; ok {
 		return nil
@@ -91,10 +103,7 @@ func RegisterNewTable(table *model.Table) error {
 	if err != nil {
 		return err
 	}
-	err = InsertTableMetadata(
-		conn, table.Name, table.Path,
-		fieldNames, fieldTypes, table.OrderBy,
-		table.Engine, table.TimestampField, table.TimestampPrecision, table.PartitionBy)
+	err = InsertTableMetadata(conn, table)
 	if err != nil {
 		return err
 	}
@@ -110,7 +119,7 @@ func RegisterNewTable(table *model.Table) error {
 
 func PopulateRegistry() error {
 	res, err := conn.Query(`
-SELECT name,path, field_names, field_types, order_by, engine, timestamp_field, timestamp_precision, partition_by
+SELECT name,paths, fs_path, field_names, field_types, order_by, engine, timestamp_field, timestamp_precision, partition_by
 FROM tables
 `)
 	if err != nil {
@@ -124,12 +133,16 @@ FROM tables
 			fieldNames []any
 			fieldTypes []any
 			orderBy    []any
+			paths      []any
 		)
 		err = res.Scan(
-			&table.Name, &table.Path,
+			&table.Name, &paths, &table.FSPath,
 			&fieldNames, &fieldTypes, &orderBy,
 			&table.Engine, &table.TimestampField, &table.TimestampPrecision, &table.PartitionBy,
 		)
+		for i := range table.Paths {
+			table.Paths[i] = paths[i].(string)
+		}
 		if err != nil {
 			return err
 		}
@@ -156,9 +169,9 @@ func createTableFolders(table *model.Table) error {
 	if !tableNameCheck.MatchString(table.Name) {
 		return fmt.Errorf("invalid table name, only letters and _ are accepted: %q", table.Name)
 	}
-	err := os.MkdirAll(filepath.Join(table.Path, "tmp"), 0755)
+	err := os.MkdirAll(filepath.Join(table.FSPath, "tmp"), 0755)
 	if err != nil {
 		return err
 	}
-	return os.MkdirAll(filepath.Join(table.Path, "data"), 0755)
+	return os.MkdirAll(filepath.Join(table.FSPath, "data"), 0755)
 }

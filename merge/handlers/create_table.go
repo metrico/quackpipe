@@ -62,7 +62,6 @@ func CreateTableHandler(w http.ResponseWriter, r *http.Request) error {
 	if req.S3Url != "" && !strings.HasPrefix(req.S3Url, "s3://") {
 		return fmt.Errorf("s3_url must start with s3://")
 	}
-
 	table := model.Table{
 		Name:               req.CreateTable,
 		Fields:             fields,
@@ -71,7 +70,9 @@ func CreateTableHandler(w http.ResponseWriter, r *http.Request) error {
 		TimestampField:     req.Timestamp.Field,
 		TimestampPrecision: req.Timestamp.Precision,
 		PartitionBy:        req.PartitionBy,
-		Path:               req.S3Url,
+	}
+	for i := range table.Paths {
+		table.Paths[i] = req.S3Url
 	}
 	err = repository.RegisterNewTable(&table)
 	if err != nil {

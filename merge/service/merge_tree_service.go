@@ -8,8 +8,8 @@ import (
 	"github.com/apache/arrow/go/v18/arrow/memory"
 	_ "github.com/marcboeker/go-duckdb"
 	"github.com/tidwall/btree"
+	"golang.org/x/sync/errgroup"
 	url2 "net/url"
-	"path"
 	"path/filepath"
 	"quackpipe/config"
 	"quackpipe/merge/data_types"
@@ -35,22 +35,26 @@ type MergeTreeService struct {
 	promises          []*promise.Promise[int32]
 	mtx               sync.Mutex
 	save              saveService
-	merge             mergeService
-	lastIterationTime [3]time.Time
+	mergeByIteration  [model.ITERATIONS_LIMIT]mergeService
+	lastIterationTime [model.ITERATIONS_LIMIT]time.Time
 	dataIndexes       *btree.BTreeG[int32]
 	dataStore         map[string]any
 }
 
 func NewMergeTreeService(t *model.Table) (*MergeTreeService, error) {
 	res := &MergeTreeService{
-		Table:    t,
-		working:  0,
-		promises: []*promise.Promise[int32]{},
+		Table:     t,
+		working:   0,
+		promises:  []*promise.Promise[int32]{},
+		dataStore: make(map[string]any),
 	}
+	/*for i := range res.lastIterationTime {
+		res.lastIterationTime[i] = time.Now()
+	}*/
 	res.dataStore = res.createDataStore()
 	res.dataIndexes = btree.NewBTreeG(res.Less)
 	var err error
-	path := t.Path
+	path := t.Paths[0]
 	if path == "" {
 		path = filepath.Join(config.Config.QuackPipe.Root, t.Name)
 	}
@@ -58,34 +62,66 @@ func NewMergeTreeService(t *model.Table) (*MergeTreeService, error) {
 	if err != nil {
 		return nil, err
 	}
-	res.merge, err = res.newMergeService()
+	res.mergeByIteration, err = res.newMergeServices()
 	return res, err
 }
 
-func (s *MergeTreeService) newMergeService() (mergeService, error) {
-	if strings.HasPrefix(s.Table.Path, "s3://") {
-		return s.newS3MergeService()
+func (s *MergeTreeService) newMergeServices() ([model.ITERATIONS_LIMIT]mergeService, error) {
+	var err error
+	var res [model.ITERATIONS_LIMIT]mergeService
+	for i, p := range s.Table.Paths {
+		res[i], err = s.newMergeService(p)
+		if err != nil {
+			return res, err
+		}
 	}
-	return s.newFileMergeService()
+	return res, err
 }
 
-func (s *MergeTreeService) newFileMergeService() (mergeService, error) {
+func (s *MergeTreeService) newMergeService(path string) (mergeService, error) {
+	if strings.HasPrefix(path, "s3://") {
+		return s.newS3MergeService(path)
+	} else if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return s.newHTTPMergeService(path)
+	}
+	return s.newFileMergeService(path)
+}
+
+func (s *MergeTreeService) newHTTPMergeService(path string) (mergeService, error) {
+	u, err := url2.Parse(path)
+	if err != nil {
+		return nil, err
+	}
+	urlPath := strings.Trim(u.Path, "/")
+	u.Path = ""
+	return &httpMergeService{
+		fsMergeService: &fsMergeService{
+			table: s.Table,
+		},
+		baseUrl: strings.Trim(u.String(), "/"),
+		tmpPath: filepath.Join(s.Table.FSPath, "tmp"),
+		path:    urlPath,
+	}, nil
+}
+
+func (s *MergeTreeService) newFileMergeService(path string) (mergeService, error) {
 	return &fsMergeService{
-		path:  s.Table.Path,
+		path:  path,
 		table: s.Table,
 	}, nil
 }
 
-func (s *MergeTreeService) newS3MergeService() (mergeService, error) {
-	s3Conf, err := s.getS3Config(s.Table.Path)
+func (s *MergeTreeService) newS3MergeService(path string) (mergeService, error) {
+	s3Conf, err := s.getS3Config(path)
 	if err != nil {
 		return nil, err
 	}
 	return &s3MergeService{
 		fsMergeService: fsMergeService{
-			path:  path.Join(config.Config.QuackPipe.Root, s.Table.Name, "tmp"),
+			path:  path,
 			table: s.Table,
 		},
+		tmpPath:  filepath.Join(s.Table.FSPath, "tmp"),
 		s3Config: s3Conf,
 	}, nil
 }
@@ -93,8 +129,23 @@ func (s *MergeTreeService) newS3MergeService() (mergeService, error) {
 func (s *MergeTreeService) newSaveService(path string) (saveService, error) {
 	if strings.HasPrefix(path, "s3://") {
 		return s.newS3SaveService(path)
+	} else if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return s.newHTTPSaveService(path)
 	}
 	return s.newFileSaveService(path)
+}
+
+func (s *MergeTreeService) newHTTPSaveService(path string) (saveService, error) {
+	schema := s.createParquetSchema()
+	return &httpSaveService{
+		fsSaveService: fsSaveService{
+			path:        "",
+			recordBatch: array.NewRecordBuilder(memory.NewGoAllocator(), schema),
+			schema:      schema,
+		},
+		httpUrl: path,
+		tmpPath: filepath.Join(s.Table.FSPath, "tmp"),
+	}, nil
 }
 
 func (s *MergeTreeService) newFileSaveService(path string) (saveService, error) {
@@ -269,8 +320,10 @@ func (s *MergeTreeService) flush() {
 		onError(nil)
 		return
 	}
-	err := s.save.Save(s.Table.Fields, dataStore, indexes)
-	onError(err)
+	go func() {
+		err := s.save.Save(s.Table.Fields, dataStore, indexes)
+		onError(err)
+	}()
 }
 
 func (s *MergeTreeService) Run() {
@@ -326,17 +379,20 @@ func (s *MergeTreeService) Store(columns map[string]any) *promise.Promise[int32]
 }
 
 type PlanMerge struct {
-	From      []string
+	// Filepath RELATIVE to the "dataDir" of the merge service
+	From []string
+	// Filepath RELATIVE to the "tmpDir" of the merge service
 	To        string
 	Iteration int
 }
 
 type FileDesc struct {
+	// filepath RELATIVE to the "dataDir" of the merge service
 	name string
 	size int64
 }
 
-func (s *MergeTreeService) planMerge() ([]PlanMerge, error) {
+func (s *MergeTreeService) PlanMerge() ([]PlanMerge, error) {
 	var res []PlanMerge
 	// configuration - timeout_s - max_res_size_bytes - iteration_id
 	configurations := [][3]int64{
@@ -345,23 +401,74 @@ func (s *MergeTreeService) planMerge() ([]PlanMerge, error) {
 		{1000, 4000 * 1024 * 1024, 3},
 	}
 	for _, conf := range configurations {
-		if time.Now().Sub(s.lastIterationTime[0]).Seconds() > float64(conf[0]) {
-			files, err := s.merge.GetFilesToMerge(int(conf[2]))
+		if time.Now().Sub(s.lastIterationTime[conf[2]-1]).Seconds() > float64(conf[0]) {
+			mergeCombined := &combinedMergeService{
+				from: s.mergeByIteration[conf[2]-1],
+				to:   s.mergeByIteration[conf[2]],
+			}
+			files, err := mergeCombined.GetFilesToMerge(int(conf[2]))
 			if err != nil {
 				return nil, err
 			}
-			plans := s.merge.PlanMerge(files, conf[1], int(conf[2]))
+			plans := mergeCombined.PlanMerge(files, conf[1], int(conf[2]))
 			res = append(res, plans...)
+			s.lastIterationTime[conf[2]-1] = time.Now()
 		}
 	}
 	return res, nil
 }
 
-// Merge method implementation
-func (s *MergeTreeService) Merge() error {
-	plan, err := s.planMerge()
+func (s *MergeTreeService) mergeIteration(plan []PlanMerge) error {
+	if len(plan) == 0 {
+		return nil
+	}
+	_i := plan[0].Iteration - 1
+	mergeCombined := &combinedMergeService{
+		from: s.mergeByIteration[_i],
+		to:   s.mergeByIteration[_i+1],
+	}
+
+	defer func() {
+		var files []string
+		for _, p := range plan {
+			files = append(files, p.To)
+		}
+		mergeCombined.DropTmp(files)
+	}()
+
+	err := mergeCombined.DoMerge(plan)
 	if err != nil {
 		return err
 	}
-	return s.merge.DoMerge(plan)
+	g := errgroup.Group{}
+	for _, _p := range plan {
+		p := _p
+		g.Go(func() error {
+			err := mergeCombined.UploadTmp(
+				mergeCombined.from.Join(mergeCombined.TmpDir(), p.To),
+				mergeCombined.to.Join(mergeCombined.ToDataDir(), p.To))
+			if err != nil {
+				return err
+			}
+			mergeCombined.Drop(p.From)
+			return nil
+		})
+	}
+	return g.Wait()
+}
+
+// Merge method implementation
+func (s *MergeTreeService) Merge(plan []PlanMerge) error {
+	var byIteration [model.ITERATIONS_LIMIT][]PlanMerge
+	for _, p := range plan {
+		byIteration[p.Iteration-1] = append(byIteration[p.Iteration-1], p)
+	}
+	g := errgroup.Group{}
+	for _, it := range byIteration {
+		_it := it
+		g.Go(func() error {
+			return s.mergeIteration(_it)
+		})
+	}
+	return g.Wait()
 }

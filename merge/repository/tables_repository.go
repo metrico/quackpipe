@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"quackpipe/model"
 	"sync"
 )
 
@@ -14,7 +15,8 @@ func CreateDuckDBTablesTable(db *sql.DB) error {
 	query := `
 	CREATE TABLE IF NOT EXISTS tables (
 		name VARCHAR PRIMARY KEY, 
-		path VARCHAR,
+		paths VARCHAR[],
+		fs_path VARCHAR,
 		field_names  VARCHAR[],     
 		field_types VARCHAR[],     
 		order_by VARCHAR[],       
@@ -34,8 +36,13 @@ func CreateDuckDBTablesTable(db *sql.DB) error {
 	return nil
 }
 
-func InsertTableMetadata(db *sql.DB, name, path string, fieldNames []string, fieldTypes []string, orderBy []string,
-	engine string, timestampField, timestampPrecision, partitionBy string) error {
+func InsertTableMetadata(db *sql.DB, t *model.Table) error {
+	fieldNames := make([]string, len(t.Fields))
+	fieldTypes := make([]string, len(t.Fields))
+	for i, field := range t.Fields {
+		fieldNames[i] = field[0]
+		fieldTypes[i] = field[1]
+	}
 	fieldNamesJSON, err := json.Marshal(fieldNames)
 	if err != nil {
 		return err
@@ -44,18 +51,21 @@ func InsertTableMetadata(db *sql.DB, name, path string, fieldNames []string, fie
 	if err != nil {
 		return err
 	}
-	orderByJSON, err := json.Marshal(orderBy)
+	orderByJSON, err := json.Marshal(t.OrderBy)
 	if err != nil {
 		return err
 	}
+	pathsJson, err := json.Marshal(t.Paths)
 
-	query := `INSERT INTO tables (
-        name, path, field_names, field_types, order_by, engine, timestamp_field, timestamp_precision, partition_by
-    ) SELECT ?, ?, ?::JSON::VARCHAR[], ?::JSON::VARCHAR[], ?::JSON::VARCHAR[], ?, ?, ?, ? ON CONFLICT DO NOTHING`
+	query := `
+INSERT INTO tables (
+	name, paths, fs_path, field_names, field_types, order_by, engine, timestamp_field, timestamp_precision, partition_by
+) SELECT ?, ?::JSON::VARCHAR[], ?, ?::JSON::VARCHAR[], ?::JSON::VARCHAR[], ?::JSON::VARCHAR[], ?, ?, ?, ? 
+ON CONFLICT DO NOTHING`
 	_, err = db.Exec(query,
-		name, path,
+		t.Name, string(pathsJson), t.FSPath,
 		string(fieldNamesJSON), string(fieldTypesJSON), string(orderByJSON),
-		engine, timestampField, timestampPrecision, partitionBy)
+		t.Engine, t.TimestampField, t.TimestampPrecision, t.PartitionBy)
 
 	return err
 }
