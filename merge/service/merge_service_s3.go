@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"golang.org/x/sync/errgroup"
 	"os"
 	"path/filepath"
 	"quackpipe/service/db"
@@ -30,7 +31,7 @@ func (s *s3MergeService) GetFilesToMerge(iteration int) ([]FileDesc, error) {
 	snapshot := ""
 	c := minioClient.ListObjects(context.Background(), s.bucket,
 		minio.ListObjectsOptions{
-			Prefix:     s.s3Config.path,
+			Prefix:     s.s3Config.path + "/",
 			MaxKeys:    1000,
 			StartAfter: snapshot,
 		})
@@ -58,11 +59,15 @@ func (s *s3MergeService) GetFilesToMerge(iteration int) ([]FileDesc, error) {
 				StartAfter: snapshot,
 			})
 	}
-	return nil, nil
+	return res, nil
 }
 
 func (s *s3MergeService) PlanMerge(descs []FileDesc, maxSize int64, iteration int) []PlanMerge {
 	return s.fsMergeService.PlanMerge(descs, maxSize, iteration)
+}
+
+func escapeString(s string) string {
+	return strings.Replace(s, "'", "''", -1)
 }
 
 func (s *s3MergeService) merge(p PlanMerge) error {
@@ -90,21 +95,25 @@ func (s *s3MergeService) merge(p PlanMerge) error {
 		from[i] = fmt.Sprintf("s3://%s/%s", s.bucket, file)
 	}
 
-	_, err = conn.Exec(`CREATE SECRET (
+	createSecret := fmt.Sprintf(`CREATE SECRET (
   TYPE S3, 
-  KEY_ID ?, 
-  SECRET ?, 
-  ENDPOINT ?, 
-  USE_SSL ?, 
+  KEY_ID '%s', 
+  SECRET '%s', 
+  ENDPOINT '%s', 
+  USE_SSL %t, 
   URL_STYLE 'path'
-);`, s.key, s.secret, s.url, s.secure)
+);`, escapeString(s.key), escapeString(s.secret), escapeString(s.url), s.secure)
+	fmt.Println(createSecret)
+
+	_, err = conn.Exec(createSecret)
 	if err != nil {
 		return err
 	}
 	createTableSQL := fmt.Sprintf(
 		`COPY(SELECT * FROM read_parquet_mergetree(ARRAY['%s'], '%s'))TO '%s' (FORMAT 'parquet')`,
-		strings.Join(p.From, "','"),
+		strings.Join(from, "','"),
 		strings.Join(s.table.OrderBy, ","), tmpFilePath)
+	fmt.Println(createTableSQL)
 	_, err = conn.Exec(createTableSQL)
 	if err != nil {
 		fmt.Println("Error read_parquet_mergetree: ", err)
@@ -117,7 +126,20 @@ func (s *s3MergeService) merge(p PlanMerge) error {
 		s3Config:      s.s3Config,
 	}
 
-	return saveSvc.uploadToS3(tmpFilePath)
+	err = saveSvc.uploadToS3(tmpFilePath)
+	if err != nil {
+		return err
+	}
+
+	minioClient, err := saveSvc.createMinioClient()
+	eg := errgroup.Group{}
+	for _, f := range p.From {
+		_f := f
+		eg.Go(func() error {
+			return minioClient.RemoveObject(context.Background(), s.bucket, _f, minio.RemoveObjectOptions{})
+		})
+	}
+	return eg.Wait()
 }
 
 func (s *s3MergeService) DoMerge(merges []PlanMerge) error {

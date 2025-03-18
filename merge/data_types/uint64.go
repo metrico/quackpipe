@@ -16,7 +16,7 @@ func (i UInt64) ParseJson(dec *jx.Decoder, store any) (any, error) {
 }
 
 func (i UInt64) Less(a any, k int32, j int32) bool {
-	return a.([]uint64)[k] < a.([]uint64)[j]
+	return a.([]uint64)[k] <= a.([]uint64)[j]
 }
 
 func (i UInt64) ArrowDataType() arrow.DataType {

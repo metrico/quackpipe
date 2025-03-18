@@ -4,12 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"quackpipe/config"
 	"quackpipe/merge/service"
 	"quackpipe/model"
 	"quackpipe/service/db"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -37,7 +39,9 @@ func InitRegistry(_conn *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	go RunMerge()
+	if !config.Config.QuackPipe.NoMerges {
+		go RunMerge()
+	}
 	return nil
 }
 
@@ -61,7 +65,12 @@ func RunMerge() {
 			}
 		}()
 		for _, table := range _registry {
-			err := table.Merge()
+			plan, err := table.PlanMerge()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			err = table.Merge(plan)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -87,7 +96,11 @@ func RegisterNewTable(table *model.Table) error {
 		fieldNames[i] = field[0]
 		fieldTypes[i] = field[1]
 	}
-	err := createTableFolders(table)
+	_table := *table
+	if strings.HasPrefix(table.Path, "s3://") {
+		_table.Path = path.Join(config.Config.QuackPipe.Root, table.Name)
+	}
+	err := createTableFolders(&_table)
 	if err != nil {
 		return err
 	}

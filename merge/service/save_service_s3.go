@@ -42,13 +42,17 @@ func (s *s3SaveService) Save(fields [][2]string, data map[string]any, index *btr
 	return s.uploadToS3(tmpFileName)
 }
 
-func (s *s3SaveService) uploadToS3(filePath string) error {
-	// Initialize minio client
+func (s *s3SaveService) createMinioClient() (*minio.Client, error) {
 	minioClient, err := minio.New(s.url, &minio.Options{
 		Creds:  credentials.NewStaticV4(s.key, s.secret, ""),
 		Secure: s.secure,
 		Region: s.region,
 	})
+	return minioClient, err
+}
+
+func (s *s3SaveService) uploadToS3(filePath string) error {
+	minioClient, err := s.createMinioClient()
 	if err != nil {
 		return fmt.Errorf("failed to create minio client: %w", err)
 	}

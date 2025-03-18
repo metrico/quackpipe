@@ -119,6 +119,7 @@ func (f *fsMergeService) merge(p PlanMerge) error {
 	for _, file := range p.From {
 		os.Remove(file)
 	}
+
 	return nil
 }
 
@@ -126,13 +127,7 @@ func (f *fsMergeService) doMerge(merges []PlanMerge, merge func(p PlanMerge) err
 	errGroup := errgroup.Group{}
 	sem := semaphore.NewWeighted(10)
 	for _, m := range merges {
-		if len(m.From) == 1 {
-			err := os.Rename(m.From[0], m.To)
-			if err != nil {
-				return err
-			}
-			continue
-		}
+
 		_m := m
 		errGroup.Go(func() error {
 			sem.Acquire(context.Background(), 1)
@@ -144,5 +139,16 @@ func (f *fsMergeService) doMerge(merges []PlanMerge, merge func(p PlanMerge) err
 }
 
 func (f *fsMergeService) DoMerge(merges []PlanMerge) error {
-	return f.doMerge(merges, f.merge)
+	_merges := make([]PlanMerge, 0, len(merges))
+	for _, m := range merges {
+		if len(m.From) == 1 {
+			err := os.Rename(m.From[0], m.To)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		_merges = append(_merges, m)
+	}
+	return f.doMerge(_merges, f.merge)
 }

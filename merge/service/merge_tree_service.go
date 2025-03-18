@@ -269,8 +269,10 @@ func (s *MergeTreeService) flush() {
 		onError(nil)
 		return
 	}
-	err := s.save.Save(s.Table.Fields, dataStore, indexes)
-	onError(err)
+	go func() {
+		err := s.save.Save(s.Table.Fields, dataStore, indexes)
+		onError(err)
+	}()
 }
 
 func (s *MergeTreeService) Run() {
@@ -336,7 +338,7 @@ type FileDesc struct {
 	size int64
 }
 
-func (s *MergeTreeService) planMerge() ([]PlanMerge, error) {
+func (s *MergeTreeService) PlanMerge() ([]PlanMerge, error) {
 	var res []PlanMerge
 	// configuration - timeout_s - max_res_size_bytes - iteration_id
 	configurations := [][3]int64{
@@ -345,23 +347,20 @@ func (s *MergeTreeService) planMerge() ([]PlanMerge, error) {
 		{1000, 4000 * 1024 * 1024, 3},
 	}
 	for _, conf := range configurations {
-		if time.Now().Sub(s.lastIterationTime[0]).Seconds() > float64(conf[0]) {
+		if time.Now().Sub(s.lastIterationTime[conf[2]-1]).Seconds() > float64(conf[0]) {
 			files, err := s.merge.GetFilesToMerge(int(conf[2]))
 			if err != nil {
 				return nil, err
 			}
 			plans := s.merge.PlanMerge(files, conf[1], int(conf[2]))
 			res = append(res, plans...)
+			s.lastIterationTime[conf[2]-1] = time.Now()
 		}
 	}
 	return res, nil
 }
 
 // Merge method implementation
-func (s *MergeTreeService) Merge() error {
-	plan, err := s.planMerge()
-	if err != nil {
-		return err
-	}
+func (s *MergeTreeService) Merge(plan []PlanMerge) error {
 	return s.merge.DoMerge(plan)
 }

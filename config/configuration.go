@@ -13,6 +13,7 @@ type QuackPipeConfiguration struct {
 	Secret        string  `json:"secret" mapstructure:"secret" default:""`
 	AllowSaveToHD bool    `json:"allow_save_to_hd" mapstructure:"allow_save_to_hd" default:"true"`
 	SaveTimeoutS  float64 `json:"save_timeout_s" mapstructure:"save_timeout_s" default:"1"`
+	NoMerges      bool    `json:"no_merges" mapstructure:"no_merges" default:"false"`
 }
 
 type Configuration struct {

@@ -8,7 +8,7 @@ import (
 type generic[T any] struct{}
 
 func (i generic[T]) MakeStore() any {
-	return make([]T, 1000)
+	return make([]T, 0, 1000)
 }
 
 func (i generic[T]) ParseJson(dec func() (T, error), store []T) ([]T, error) {
