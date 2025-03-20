@@ -65,7 +65,6 @@ func CreateTableHandler(w http.ResponseWriter, r *http.Request) error {
 
 	table := model.Table{
 		Name:               req.CreateTable,
-		Fields:             fields,
 		Engine:             req.Engine,
 		OrderBy:            req.OrderBy,
 		TimestampField:     req.Timestamp.Field,

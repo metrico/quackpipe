@@ -1,11 +1,14 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
+	"html/template"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,6 +17,10 @@ import (
 	"sort"
 	"strings"
 )
+
+var CHSQL_VER = "v1.0.9"
+
+const CHSQL_EXT_URL = "https://github.com/quackscience/duckdb-extension-clickhouse-sql/releases/download/{{.VER}}/chsql.{{.DUCKDB_VER}}.{{.ARCH}}.duckdb_extension"
 
 type mergeService interface {
 	GetFilesToMerge(iteration int) ([]FileDesc, error)
@@ -58,7 +65,7 @@ func (f *fsMergeService) PlanMerge(files []FileDesc, maxResSize int64, iteration
 	mergeSize := int64(0)
 	uid, _ := uuid.NewUUID()
 	_res := PlanMerge{
-		To:        path.Join(f.path, fmt.Sprintf("%s.%d.parquet", uid.String(), iteration+1)),
+		To:        path.Join(fmt.Sprintf("%s.%d.parquet", uid.String(), iteration+1)),
 		Iteration: iteration,
 	}
 	for _, file := range files {
@@ -68,7 +75,7 @@ func (f *fsMergeService) PlanMerge(files []FileDesc, maxResSize int64, iteration
 			res = append(res, _res)
 			uid, _ := uuid.NewUUID()
 			_res = PlanMerge{
-				To:        path.Join(f.path, fmt.Sprintf("%s.%d.parquet", uid.String(), iteration+1)),
+				To:        path.Join(fmt.Sprintf("%s.%d.parquet", uid.String(), iteration+1)),
 				Iteration: iteration,
 			}
 			mergeSize = 0
@@ -80,6 +87,68 @@ func (f *fsMergeService) PlanMerge(files []FileDesc, maxResSize int64, iteration
 	return res
 }
 
+var tmpl = func() *template.Template {
+	_tmpl, err := template.New("chsql_url").Parse(CHSQL_EXT_URL)
+	if err != nil {
+		panic(err)
+	}
+	return _tmpl
+}()
+
+func installChSql(db *sql.DB) error {
+	if CHSQL_EXT_URL == "community" {
+		_, err := db.Exec("INSTALL chsql FROM community")
+		if err != nil {
+			return fmt.Errorf("failed to install chsql extension: %w", err)
+		}
+
+		_, err = db.Exec("LOAD chsql")
+		return err
+	}
+
+	var (
+		ver  string
+		arch string
+	)
+	row := db.QueryRow("SELECT version()")
+	if row == nil {
+		return fmt.Errorf("failed to get version")
+	}
+	err := row.Scan(&ver)
+	if err != nil {
+		return fmt.Errorf("failed to scan version: %w", err)
+	}
+
+	row = db.QueryRow("PRAGMA platform")
+	if row == nil {
+		return fmt.Errorf("failed to get platform")
+	}
+	err = row.Scan(&arch)
+	if err != nil {
+		return fmt.Errorf("failed to scan platform: %w", err)
+	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, map[string]string{
+		"VER":        CHSQL_VER,
+		"DUCKDB_VER": ver,
+		"ARCH":       arch,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	chsqlURL := buf.String()
+
+	_, err = db.Exec(fmt.Sprintf("INSTALL '%s'", chsqlURL))
+	if err != nil {
+		return fmt.Errorf("failed to install chsql extension: %w", err)
+	}
+
+	_, err = db.Exec("LOAD 'chsql'")
+	return err
+}
+
 func (f *fsMergeService) merge(p PlanMerge) error {
 	// Create a temporary merged file
 	tmpFilePath := filepath.Join(f.path, "tmp", p.To)
@@ -88,14 +157,8 @@ func (f *fsMergeService) merge(p PlanMerge) error {
 	if err != nil {
 		return err
 	}
-	_, err = conn.Exec("INSTALL chsql FROM community")
+	err = installChSql(conn)
 	if err != nil {
-		fmt.Println("Error loading chsql extension: ", err)
-		return err
-	}
-	_, err = conn.Exec("LOAD chsql")
-	if err != nil {
-		fmt.Println("Error loading chsql extension: ", err)
 		return err
 	}
 	defer conn.Close()

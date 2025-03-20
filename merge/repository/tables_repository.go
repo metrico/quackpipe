@@ -4,10 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"quackpipe/model"
 	"sync"
 )
 
 var dbMtx sync.Mutex
+
+// TODO: Implement the incremental initialization of TablesTable
 
 func CreateDuckDBTablesTable(db *sql.DB) error {
 	// Adjusted schema using DuckDB's ARRAY type
@@ -21,7 +24,8 @@ func CreateDuckDBTablesTable(db *sql.DB) error {
 		engine VARCHAR,     
 		timestamp_field VARCHAR,    
 		timestamp_precision VARCHAR,
-		partition_by VARCHAR   
+		partition_by VARCHAR,
+		auto_timestamp BOOLEAN DEFAULT FALSE,
 	);
 	`
 
@@ -34,70 +38,42 @@ func CreateDuckDBTablesTable(db *sql.DB) error {
 	return nil
 }
 
-func InsertTableMetadata(db *sql.DB, name, path string, fieldNames []string, fieldTypes []string, orderBy []string,
-	engine string, timestampField, timestampPrecision, partitionBy string) error {
-	fieldNamesJSON, err := json.Marshal(fieldNames)
-	if err != nil {
-		return err
-	}
-	fieldTypesJSON, err := json.Marshal(fieldTypes)
-	if err != nil {
-		return err
-	}
-	orderByJSON, err := json.Marshal(orderBy)
+func InsertTableMetadata(db *sql.DB, table *model.Table) error {
+	orderByJSON, err := json.Marshal(table.OrderBy)
 	if err != nil {
 		return err
 	}
 
 	query := `INSERT INTO tables (
-        name, path, field_names, field_types, order_by, engine, timestamp_field, timestamp_precision, partition_by
-    ) SELECT ?, ?, ?::JSON::VARCHAR[], ?::JSON::VARCHAR[], ?::JSON::VARCHAR[], ?, ?, ?, ? ON CONFLICT DO NOTHING`
+        name, path, order_by, engine, timestamp_field, timestamp_precision, partition_by, auto_timestamp
+    ) SELECT ?, ?, ?::JSON::VARCHAR[], ?, ?, ?, ?, ? ON CONFLICT DO NOTHING`
 	_, err = db.Exec(query,
-		name, path,
-		string(fieldNamesJSON), string(fieldTypesJSON), string(orderByJSON),
-		engine, timestampField, timestampPrecision, partitionBy)
+		table.Name, table.Path, string(orderByJSON),
+		table.Engine, table.TimestampField, table.TimestampPrecision, table.PartitionBy, table.AutoTimestamp)
 
 	return err
 }
 
-func DisplayAllData(db *sql.DB, tableName string) error {
-	query := fmt.Sprintf("SELECT * FROM %s", tableName)
-
+func GetAllTableMetadata(db *sql.DB) ([]*model.Table, error) {
+	query := `SELECT name, path, order_by, engine, timestamp_field, timestamp_precision, partition_by, auto_timestamp FROM tables;`
 	rows, err := db.Query(query)
 	if err != nil {
-		return fmt.Errorf("failed to query table data: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
-
-	columns, err := rows.Columns()
-	if err != nil {
-		return fmt.Errorf("failed to get columns: %w", err)
-	}
-
-	values := make([]interface{}, len(columns))
-	valuePtrs := make([]interface{}, len(columns))
-	for i := range columns {
-		valuePtrs[i] = &values[i]
-	}
-
-	fmt.Println("Table Data:")
+	tables := make([]*model.Table, 0)
 	for rows.Next() {
-		err := rows.Scan(valuePtrs...)
+		var table model.Table
+		var orderBy []any
+		err := rows.Scan(&table.Name, &table.Path, &orderBy, &table.Engine, &table.TimestampField,
+			&table.TimestampPrecision, &table.PartitionBy, &table.AutoTimestamp)
 		if err != nil {
-			return fmt.Errorf("failed to scan row: %w", err)
+			return nil, err
 		}
-
-		for i, col := range values {
-			if col != nil {
-				fmt.Printf("%s: %v\t", columns[i], col)
-			}
+		for _, v := range orderBy {
+			table.OrderBy = append(table.OrderBy, v.(string))
 		}
-		fmt.Println()
+		tables = append(tables, &table)
 	}
-
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("error occurred during row iteration: %w", err)
-	}
-
-	return nil
+	return tables, nil
 }

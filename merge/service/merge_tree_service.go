@@ -4,9 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/apache/arrow/go/v18/arrow"
-	"github.com/apache/arrow/go/v18/arrow/array"
-	"github.com/apache/arrow/go/v18/arrow/memory"
-	_ "github.com/marcboeker/go-duckdb"
+	_ "github.com/marcboeker/go-duckdb/v2"
 	"github.com/tidwall/btree"
 	url2 "net/url"
 	"path"
@@ -28,17 +26,26 @@ type IMergeTree interface {
 	Stop()
 }
 
+type columnStore struct {
+	data   any
+	valids []bool
+	tp     data_types.DataType
+}
+
 type MergeTreeService struct {
-	Table             *model.Table
-	ticker            *time.Ticker
-	working           uint32
-	promises          []*promise.Promise[int32]
-	mtx               sync.Mutex
-	save              saveService
-	merge             mergeService
-	lastIterationTime [3]time.Time
-	dataIndexes       *btree.BTreeG[int32]
-	dataStore         map[string]any
+	Table              *model.Table
+	ticker             *time.Ticker
+	working            uint32
+	promises           []*promise.Promise[int32]
+	mtx                sync.Mutex
+	save               saveService
+	merge              mergeService
+	lastIterationTime  [3]time.Time
+	dataIndexes        *btree.BTreeG[int32]
+	unorderedDataStore map[string]*columnStore
+	orderedDataStore   map[string]*columnStore
+
+	less func(store any, i int32, j int32) bool
 }
 
 func NewMergeTreeService(t *model.Table) (*MergeTreeService, error) {
@@ -47,7 +54,8 @@ func NewMergeTreeService(t *model.Table) (*MergeTreeService, error) {
 		working:  0,
 		promises: []*promise.Promise[int32]{},
 	}
-	res.dataStore = res.createDataStore()
+	res.unorderedDataStore = make(map[string]*columnStore)
+	res.orderedDataStore = make(map[string]*columnStore)
 	res.dataIndexes = btree.NewBTreeG(res.Less)
 	var err error
 	path := t.Path
@@ -98,11 +106,8 @@ func (s *MergeTreeService) newSaveService(path string) (saveService, error) {
 }
 
 func (s *MergeTreeService) newFileSaveService(path string) (saveService, error) {
-	schema := s.createParquetSchema()
 	return &fsSaveService{
-		path:        path,
-		recordBatch: array.NewRecordBuilder(memory.NewGoAllocator(), schema),
-		schema:      schema,
+		path: path,
 	}, nil
 }
 
@@ -111,12 +116,9 @@ func (s *MergeTreeService) newS3SaveService(path string) (saveService, error) {
 	if err != nil {
 		return nil, err
 	}
-	schema := s.createParquetSchema()
 	res := &s3SaveService{
 		fsSaveService: fsSaveService{
-			path:        "",
-			recordBatch: array.NewRecordBuilder(memory.NewGoAllocator(), schema),
-			schema:      schema,
+			path: "",
 		},
 		s3Config: s3Conf,
 	}
@@ -149,113 +151,92 @@ func (s *MergeTreeService) getS3Config(path string) (s3Config, error) {
 	}, nil
 }
 
-func (s *MergeTreeService) createDataStore() map[string]any {
-	res := make(map[string]any)
-	for _, f := range s.Table.Fields {
-		res[f[0]] = data_types.DataTypes[f[1]].MakeStore()
-	}
-	return res
-}
-
 func (s *MergeTreeService) size() int32 {
 	return int32(s.dataIndexes.Len())
 }
 
-func getFieldType(t *model.Table, fieldName string) string {
-	for _, field := range t.Fields {
-		if field[0] == fieldName {
-			return field[1]
-		}
+func (s *MergeTreeService) getFieldType(fieldName string) (data_types.DataType, error) {
+	field, ok := s.unorderedDataStore[fieldName]
+	if !ok {
+		field, ok = s.orderedDataStore[fieldName]
 	}
-	return ""
+	if !ok {
+		return data_types.DataTypes["UNKNOWN"], fmt.Errorf("column %s not found", fieldName)
+	}
+	return field.tp, nil
 }
 
 func (s *MergeTreeService) Less(a, b int32) bool {
-	for _, o := range s.Table.OrderBy {
-		t := getFieldType(s.Table, o)
-		if !data_types.DataTypes[t].Less(s.dataStore[o], a, b) {
-			return false
-		}
+	if s.less == nil {
+		return false
 	}
-	return true
+	return s.less(s.orderedDataStore[s.Table.OrderBy[0]].data, a, b)
 }
 
-func GetColumnLength(column any) int {
-	switch column := column.(type) {
-	case []string:
-		return len(column)
-	case []int64:
-		return len(column)
-	case []uint64:
-		return len(column)
-	case []float64:
-		return len(column)
-	default:
-		return 0
-	}
-}
-
-func validateData(table *model.Table, columns map[string]any) error {
-
-	fieldMap := make(map[string]string)
-	for _, field := range table.Fields {
-		fieldMap[field[0]] = field[1]
-	}
-
-	// Check if columns map size matches the table.Fields size
-	if len(columns) != len(table.Fields) {
-		return errors.New("columns size does not match table fields size")
-	}
-
-	var (
-		dataLength int
-		first      = true
-	)
-	for _, data := range columns {
-		if first {
-			dataLength = GetColumnLength(data)
-			first = false
-			continue
+func (s *MergeTreeService) validateData(columns map[string]any) error {
+	for k, v := range columns {
+		insertTypeName, _ := data_types.GoTypeToDataType(v)
+		field, ok := s.unorderedDataStore[k]
+		if ok {
+			existTypeName, _ := data_types.GoTypeToDataType(field.data)
+			if insertTypeName != existTypeName {
+				return fmt.Errorf("column `%s` type mismatch: expected %s, got %s",
+					k, existTypeName, insertTypeName)
+			}
 		}
-		if GetColumnLength(data) != dataLength {
-			return errors.New("columns length mismatch")
+		field, ok = s.orderedDataStore[k]
+		if ok {
+			existTypeName, _ := data_types.GoTypeToDataType(field.data)
+			if insertTypeName != existTypeName {
+				return fmt.Errorf("column `%s` type mismatch: expected %s, got %s",
+					k, existTypeName, insertTypeName)
+			}
 		}
 	}
-	for column, data := range columns {
-
-		// Validate if the column exists in the table definition
-		columnType, ok := fieldMap[column]
-		if !ok {
-			return fmt.Errorf("invalid column: %s", column)
-		}
-		// Validate data types for each column
-		t, ok := data_types.DataTypes[columnType]
-		if !ok {
-			return fmt.Errorf("unsupported column type: %s", columnType)
-		}
-		err := t.ValidateData(data)
-		if err != nil {
-			return fmt.Errorf("invalid data for column %s: %w", column, err)
-		}
-	}
-
 	return nil
 }
 
+func mergeColumns(unordered, ordered map[string]*columnStore) []fieldDesc {
+	mergedCols := make(map[string]string)
+	for f, _ := range unordered {
+		mergedCols[f] = unordered[f].tp.GetName()
+	}
+	for f, _ := range ordered {
+		mergedCols[f] = ordered[f].tp.GetName()
+	}
+	var res []fieldDesc
+	for f, t := range mergedCols {
+		res = append(res, fd(t, f))
+	}
+	return res
+}
+
 func (s *MergeTreeService) createParquetSchema() *arrow.Schema {
-	fields := make([]arrow.Field, len(s.Table.Fields))
-	for i, field := range s.Table.Fields {
-		var fieldType = data_types.DataTypes[field[1]].ArrowDataType()
-		fields[i] = arrow.Field{Name: field[0], Type: fieldType}
+	mergedCols := mergeColumns(s.unorderedDataStore, s.orderedDataStore)
+	fields := make([]arrow.Field, len(mergedCols))
+	i := 0
+	for _, field := range mergedCols {
+		var fieldType = data_types.DataTypes[field[0]]
+		fields[i] = arrow.Field{Name: field[1], Type: fieldType.ArrowDataType()}
+		i++
 	}
 	return arrow.NewSchema(fields, nil)
 }
 
+func storeSize(columns map[string]*columnStore) int64 {
+	for _, col := range columns {
+		return col.tp.GetLength(col.data)
+	}
+	return 0
+}
+
 func (s *MergeTreeService) flush() {
 	s.mtx.Lock()
-	dataStore := s.dataStore
+	unorderedDataStore := s.unorderedDataStore
+	orderedDataStore := s.orderedDataStore
 	indexes := s.dataIndexes
-	s.dataStore = s.createDataStore()
+	s.unorderedDataStore = make(map[string]*columnStore)
+	s.orderedDataStore = make(map[string]*columnStore)
 	s.dataIndexes = btree.NewBTreeG(s.Less)
 	promises := s.promises
 	s.promises = nil
@@ -265,12 +246,13 @@ func (s *MergeTreeService) flush() {
 			p.Done(0, err)
 		}
 	}
-	if indexes.Len() == 0 {
+	if indexes.Len() == 0 && storeSize(unorderedDataStore) == 0 {
 		onError(nil)
 		return
 	}
 	go func() {
-		err := s.save.Save(s.Table.Fields, dataStore, indexes)
+		err := s.save.Save(mergeColumns(unorderedDataStore, orderedDataStore),
+			unorderedDataStore, orderedDataStore, indexes)
 		onError(err)
 	}()
 }
@@ -298,30 +280,123 @@ func (s *MergeTreeService) Stop() {
 	atomic.StoreUint32(&s.working, 0)
 }
 
+func fastFillArray[T any](arr []T, data T) []T {
+	if len(arr) == 0 {
+		return arr
+	}
+	arr[0] = data
+	for i := 1; i < len(arr); i *= 2 {
+		copy(arr[i:], arr[:i])
+	}
+	return arr
+}
+
+func appendDataStore(store *map[string]*columnStore, data map[string]*columnStore) error {
+	var columnsToCreate []fieldDesc
+	for k, v := range data {
+		if _, ok := (*store)[k]; !ok {
+			columnsToCreate = append(columnsToCreate, fd(v.tp.GetName(), k))
+		}
+	}
+	var columnsToAppend []string
+	for k, _ := range *store {
+		if _, ok := data[k]; !ok {
+			columnsToAppend = append(columnsToAppend, k)
+		}
+	}
+	var originalStoreSize = 0
+	for _, f := range *store {
+		originalStoreSize = int(f.tp.GetLength(f.data))
+		break
+	}
+
+	var originalDataSize = 0
+	for _, f := range data {
+		originalDataSize = int(f.tp.GetLength(f.data))
+		break
+	}
+
+	for _, f := range columnsToCreate {
+		newCol := &columnStore{
+			data:   data_types.DataTypes[f[0]].MakeStore(originalStoreSize),
+			valids: make([]bool, originalStoreSize),
+			tp:     data_types.DataTypes[f[0]],
+		}
+		(*store)[f[1]] = newCol
+	}
+	for _, f := range columnsToAppend {
+		(*store)[f].data = (*store)[f].tp.AppendDefault(originalDataSize, (*store)[f].data)
+		(*store)[f].valids = append(
+			(*store)[f].valids, make([]bool, originalDataSize)...,
+		)
+	}
+	for k, v := range data {
+		var err error
+		(*store)[k].data, err = (*store)[k].tp.AppendStore((*store)[k].data, v.data)
+		if err != nil {
+			return fmt.Errorf("appending data to column `%s`: %w", k, err)
+		}
+		(*store)[k].valids = append((*store)[k].valids, v.valids...)
+	}
+	return nil
+}
+
 func (s *MergeTreeService) Store(columns map[string]any) *promise.Promise[int32] {
-	if err := validateData(s.Table, columns); err != nil {
+	if err := s.validateData(columns); err != nil {
 		return promise.Fulfilled(err, int32(0))
 	}
 
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	var oldSize, newSize int32
+	_columns := make(map[string]*columnStore, len(columns)+1)
+	var sz int
+
 	for k, v := range columns {
-		tp := getFieldType(s.Table, k)
-
-		var err error
-		oldSize = int32(GetColumnLength(s.dataStore[k]))
-		s.dataStore[k], err = data_types.DataTypes[tp].AppendStore(s.dataStore[k], v)
-		if err != nil {
-			return promise.Fulfilled[int32](err, 0)
+		_, tp := data_types.GoTypeToDataType(v)
+		sz = int(tp.GetLength(v))
+		_columns[k] = &columnStore{
+			data:   v,
+			tp:     tp,
+			valids: fastFillArray(make([]bool, sz), true),
 		}
-		newSize = int32(GetColumnLength(s.dataStore[k]))
 	}
-	for i := oldSize; i < newSize; i++ {
-		s.dataIndexes.Set(i)
+	if s.Table.AutoTimestamp {
+		tsCol := &columnStore{
+			data:   data_types.DataTypes["INT8"].MakeStore(sz),
+			valids: fastFillArray(make([]bool, sz), true),
+			tp:     data_types.DataTypes["INT8"],
+		}
+		for i := 0; i < sz; i++ {
+			tsCol.data.([]int64)[i] = time.Now().UnixNano()
+		}
+		_columns["__timestamp"] = tsCol
 	}
 
+	if _, ok := _columns[s.Table.OrderBy[0]]; !ok {
+		err := appendDataStore(&s.unorderedDataStore, _columns)
+		if err != nil {
+			return promise.Fulfilled(err, int32(0))
+		}
+	} else {
+		if s.less == nil {
+			s.less = _columns[s.Table.OrderBy[0]].tp.Less
+		}
+		var oldSize, newSize int32
+		if col, ok := s.orderedDataStore[s.Table.OrderBy[0]]; ok {
+			oldSize = int32(col.tp.GetLength(col.data))
+		}
+		err := appendDataStore(&s.orderedDataStore, _columns)
+		if err != nil {
+			return promise.Fulfilled(err, int32(0))
+		}
+		if col, ok := s.orderedDataStore[s.Table.OrderBy[0]]; ok {
+			newSize = int32(col.tp.GetLength(col.data))
+		}
+		for i := oldSize; i < newSize; i++ {
+			s.dataIndexes.Set(i)
+		}
+	}
 	p := promise.New[int32]()
 	s.promises = append(s.promises, p)
 	return p

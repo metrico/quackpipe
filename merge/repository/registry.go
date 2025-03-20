@@ -10,6 +10,7 @@ import (
 	"quackpipe/merge/service"
 	"quackpipe/model"
 	"quackpipe/service/db"
+	"quackpipe/utils/promise"
 	"regexp"
 	"strings"
 	"sync"
@@ -80,6 +81,31 @@ func RunMerge() {
 
 var tableNameCheck = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 
+func Store(name string, columns map[string]any) *promise.Promise[int32] {
+	table := registry[name]
+	if table == nil {
+		err := RegisterSimpleTable(name)
+		if err != nil {
+			return promise.Fulfilled(err, int32(0))
+		}
+		table = registry[name]
+	}
+	return table.Store(columns)
+}
+
+func RegisterSimpleTable(name string) error {
+	table := &model.Table{
+		Name:               name,
+		Engine:             "Merge",
+		OrderBy:            []string{"__timestamp"},
+		TimestampField:     "__timestamp",
+		TimestampPrecision: "ns",
+		PartitionBy:        "",
+		AutoTimestamp:      true,
+	}
+	return RegisterNewTable(table)
+}
+
 func RegisterNewTable(table *model.Table) error {
 	if !tableNameCheck.MatchString(table.Name) {
 		return fmt.Errorf("invalid table name, only letters and _ are accepted: %q", table.Name)
@@ -90,12 +116,6 @@ func RegisterNewTable(table *model.Table) error {
 	if _, ok := registry[table.Name]; ok {
 		return nil
 	}
-	fieldNames := make([]string, len(table.Fields))
-	fieldTypes := make([]string, len(table.Fields))
-	for i, field := range table.Fields {
-		fieldNames[i] = field[0]
-		fieldTypes[i] = field[1]
-	}
 	_table := *table
 	if strings.HasPrefix(table.Path, "s3://") {
 		_table.Path = path.Join(config.Config.QuackPipe.Root, table.Name)
@@ -104,10 +124,7 @@ func RegisterNewTable(table *model.Table) error {
 	if err != nil {
 		return err
 	}
-	err = InsertTableMetadata(
-		conn, table.Name, table.Path,
-		fieldNames, fieldTypes, table.OrderBy,
-		table.Engine, table.TimestampField, table.TimestampPrecision, table.PartitionBy)
+	err = InsertTableMetadata(conn, table)
 	if err != nil {
 		return err
 	}
@@ -122,38 +139,13 @@ func RegisterNewTable(table *model.Table) error {
 }
 
 func PopulateRegistry() error {
-	res, err := conn.Query(`
-SELECT name,path, field_names, field_types, order_by, engine, timestamp_field, timestamp_precision, partition_by
-FROM tables
-`)
+	tables, err := GetAllTableMetadata(conn)
 	if err != nil {
 		return err
 	}
-	defer res.Close()
-
-	for res.Next() {
-		var table model.Table
-		var (
-			fieldNames []any
-			fieldTypes []any
-			orderBy    []any
-		)
-		err = res.Scan(
-			&table.Name, &table.Path,
-			&fieldNames, &fieldTypes, &orderBy,
-			&table.Engine, &table.TimestampField, &table.TimestampPrecision, &table.PartitionBy,
-		)
-		if err != nil {
-			return err
-		}
-		for i, n := range fieldNames {
-			table.Fields = append(table.Fields, [2]string{n.(string), fieldTypes[i].(string)})
-		}
-		for _, n := range orderBy {
-			table.OrderBy = append(table.OrderBy, n.(string))
-		}
+	for _, table := range tables {
 		registryMtx.Lock()
-		registry[table.Name], err = service.NewMergeTreeService(&table)
+		registry[table.Name], err = service.NewMergeTreeService(table)
 		if err != nil {
 			registryMtx.Unlock()
 			return err

@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -12,10 +13,11 @@ var registry = make(map[string]ParserFactory)
 
 type IParser interface {
 	Parse(data []byte) (chan *ParserResponse, error)
-	ParseReader(r io.Reader) (chan *ParserResponse, error)
+	ParseReader(ctx context.Context, r io.Reader) (chan *ParserResponse, error)
 }
 
 type ParserResponse struct {
+	Table string
 	Data  map[string]any
 	Error error
 }
