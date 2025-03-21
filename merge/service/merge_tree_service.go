@@ -67,6 +67,7 @@ func NewMergeTreeService(t *model.Table) (*MergeTreeService, error) {
 		return nil, err
 	}
 	res.merge, err = res.newMergeService()
+	res.lastIterationTime = [3]time.Time{time.Now(), time.Now(), time.Now()}
 	return res, err
 }
 

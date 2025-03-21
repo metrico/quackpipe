@@ -94,7 +94,7 @@ func (l *LineProtoParser) parse(scanner *bufio.Scanner, res chan *ParserResponse
 	var (
 		table    string
 		schemaId uint64
-		data     map[string]any
+		data     map[string]any = make(map[string]any)
 	)
 
 	send := func() {

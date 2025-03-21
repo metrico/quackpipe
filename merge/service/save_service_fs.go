@@ -129,9 +129,15 @@ func (fs *fsSaveService) Save(fields []fieldDesc, unorderedData map[string]*colu
 		return err
 	}
 	tmpFileName := path.Join(fs.path, "tmp", filename.String()+".1.parquet")
+	fileName := path.Join(fs.path, "data", filename.String()+".1"+".parquet")
+	/*
+		fmt.Printf("Saving file:\n  FileSave path: %s\n  tmp path: %s\n  data path:  %s\n",
+			fs.path, tmpFileName, fileName)
+
+	*/
 	err = fs.saveTmpFile(tmpFileName, fields, unorderedData, orderedData, index)
 	if err != nil {
 		return err
 	}
-	return os.Rename(tmpFileName, path.Join(fs.path, "data", filename.String()+".1.parquet"))
+	return os.Rename(tmpFileName, fileName)
 }

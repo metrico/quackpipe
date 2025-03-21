@@ -32,5 +32,14 @@ func GetParser(name string, fieldNames []string, fieldTypes []string) (IParser, 
 			return parser(fieldNames, fieldTypes), nil
 		}
 	}
+	if parser, ok := registry[""]; ok {
+		return parser(fieldNames, fieldTypes), nil
+	}
 	return nil, fmt.Errorf("parser %s not found", name)
+}
+
+func init() {
+	RegisterParser("", func(fieldNames []string, fieldTypes []string) IParser {
+		return &LineProtoParser{}
+	})
 }

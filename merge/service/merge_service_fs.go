@@ -150,8 +150,20 @@ func installChSql(db *sql.DB) error {
 }
 
 func (f *fsMergeService) merge(p PlanMerge) error {
-	// Create a temporary merged file
+
 	tmpFilePath := filepath.Join(f.path, "tmp", p.To)
+	finalFilePath := filepath.Join(f.path, "data", p.To)
+	/*
+		fmt.Printf("Merging files:\n  Base path: %s\n", f.path)
+		for _, file := range p.From {
+			fmt.Printf("  %s\n", file)
+		}
+		fmt.Printf("  Tmp path: %s\n", tmpFilePath)
+		fmt.Printf("  Data path: %s\n", finalFilePath)
+	*/
+	if len(p.From) == 1 {
+		return os.Rename(p.From[0], finalFilePath)
+	}
 
 	conn, err := db.ConnectDuckDB("?allow_unsigned_extensions=1")
 	if err != nil {
@@ -174,7 +186,6 @@ func (f *fsMergeService) merge(p PlanMerge) error {
 		return err
 	}
 
-	finalFilePath := filepath.Join(f.path, "data", p.To)
 	err = os.Rename(tmpFilePath, finalFilePath)
 	if err != nil {
 		return err
@@ -202,16 +213,7 @@ func (f *fsMergeService) doMerge(merges []PlanMerge, merge func(p PlanMerge) err
 }
 
 func (f *fsMergeService) DoMerge(merges []PlanMerge) error {
-	_merges := make([]PlanMerge, 0, len(merges))
-	for _, m := range merges {
-		if len(m.From) == 1 {
-			err := os.Rename(m.From[0], m.To)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-		_merges = append(_merges, m)
-	}
+	_merges := make([]PlanMerge, len(merges))
+	copy(_merges, merges)
 	return f.doMerge(_merges, f.merge)
 }
