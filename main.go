@@ -3,13 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/metrico/quackpipe/config"
+	"github.com/metrico/quackpipe/merge"
+	"github.com/metrico/quackpipe/model"
+	"github.com/metrico/quackpipe/router"
+	"github.com/metrico/quackpipe/utils"
 	"net/http"
 	"os"
-	"quackpipe/config"
-	"quackpipe/merge"
-	"quackpipe/model"
-	"quackpipe/router"
-	"quackpipe/utils"
 )
 
 // initFlags initializes the command line flags

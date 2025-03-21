@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"context"
+	"github.com/metrico/quackpipe/merge/parsers"
+	"github.com/metrico/quackpipe/merge/repository"
+	"github.com/metrico/quackpipe/utils/promise"
 	"net/http"
-	"quackpipe/merge/parsers"
-	"quackpipe/merge/repository"
-	"quackpipe/utils/promise"
 )
 
 func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {

@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/marcboeker/go-duckdb/v2" // load duckdb driver
+	"github.com/metrico/quackpipe/model"
 	"os"
-	"quackpipe/model"
 	"time"
 )
 

@@ -6,8 +6,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-faster/jx"
+	"github.com/metrico/quackpipe/merge/data_types"
 	"io"
-	"quackpipe/merge/data_types"
 )
 
 type NDJSONParser struct {

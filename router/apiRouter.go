@@ -1,7 +1,7 @@
 package router
 
 import (
-	handlers "quackpipe/handler"
+	handlers "github.com/metrico/quackpipe/handler"
 )
 
 var _ = func() int {

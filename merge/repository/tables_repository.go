@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"quackpipe/model"
+	"github.com/metrico/quackpipe/model"
 	"sync"
 )
 

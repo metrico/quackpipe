@@ -3,10 +3,10 @@ package root
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/metrico/quackpipe/model"
+	"github.com/metrico/quackpipe/service/db"
+	"github.com/metrico/quackpipe/utils"
 	"net/http"
-	"quackpipe/model"
-	"quackpipe/service/db"
-	"quackpipe/utils"
 )
 
 func QueryOperation(flagInformation *model.CommandLineFlags, query string, r *http.Request, defaultPath string, defaultFormat string, defaultParams string) (string, error) {

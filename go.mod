@@ -1,4 +1,4 @@
-module quackpipe
+module github.com/metrico/quackpipe
 
 go 1.24
 

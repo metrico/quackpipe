@@ -7,10 +7,10 @@ import (
 	"github.com/apache/arrow/go/v18/parquet"
 	"github.com/apache/arrow/go/v18/parquet/pqarrow"
 	"github.com/google/uuid"
+	"github.com/metrico/quackpipe/merge/data_types"
 	"github.com/tidwall/btree"
 	"os"
 	"path"
-	"quackpipe/merge/data_types"
 )
 
 type fieldDesc [2]string

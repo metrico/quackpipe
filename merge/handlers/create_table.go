@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"fmt"
+	"github.com/metrico/quackpipe/config"
+	"github.com/metrico/quackpipe/merge/repository"
+	"github.com/metrico/quackpipe/model"
 	"gopkg.in/yaml.v3"
 	"io"
 	"net/http"
-	"quackpipe/config"
-	"quackpipe/merge/repository"
-	"quackpipe/model"
 	"strings"
 )
 

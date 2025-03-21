@@ -1,11 +1,11 @@
 package merge
 
 import (
+	"github.com/metrico/quackpipe/config"
+	"github.com/metrico/quackpipe/merge/repository"
+	"github.com/metrico/quackpipe/utils/promise"
 	"os"
 	"path"
-	"quackpipe/config"
-	"quackpipe/merge/repository"
-	"quackpipe/utils/promise"
 	"testing"
 	"time"
 )

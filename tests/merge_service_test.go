@@ -2,9 +2,9 @@ package tests
 
 import (
 	"fmt"
+	"github.com/metrico/quackpipe/model"
+	"github.com/metrico/quackpipe/service"
 	"github.com/stretchr/testify/assert"
-	"quackpipe/model"
-	"quackpipe/service"
 	"testing"
 )
 

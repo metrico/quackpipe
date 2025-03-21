@@ -3,10 +3,10 @@ package tests
 import (
 	"database/sql"
 	"github.com/google/uuid"
+	"github.com/metrico/quackpipe/repository"
+	db2 "github.com/metrico/quackpipe/service/db"
 	"log"
 	"os"
-	"quackpipe/repository"
-	db2 "quackpipe/service/db"
 	"testing"
 )
 

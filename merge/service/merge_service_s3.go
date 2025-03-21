@@ -3,12 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/metrico/quackpipe/service/db"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/sync/errgroup"
 	"os"
 	"path/filepath"
-	"quackpipe/service/db"
 	"strings"
 )
 

@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/metrico/quackpipe/config"
+	"github.com/metrico/quackpipe/merge"
+	"github.com/metrico/quackpipe/model"
+	"github.com/metrico/quackpipe/router"
 	"io"
 	"net/http"
-	"quackpipe/config"
-	"quackpipe/merge"
-	"quackpipe/model"
-	"quackpipe/router"
 	"strings"
 	"testing"
 	"time"
@@ -21,7 +21,6 @@ func TestE2E(t *testing.T) {
 			MergeTimeoutS: 10,
 			Secret:        "XXXXXX",
 		},
-		DBPath: "_testdata",
 	}
 	config.AppFlags = &model.CommandLineFlags{
 		Host:   toPtr("localhost"),

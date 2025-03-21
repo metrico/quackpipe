@@ -2,8 +2,8 @@ package router
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/metrico/quackpipe/model"
 	"net/http"
-	"quackpipe/model"
 )
 
 type Route struct {

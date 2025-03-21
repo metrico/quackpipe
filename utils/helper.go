@@ -1,11 +1,11 @@
 package utils
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"bytes"
-	"quackpipe/model"
+	"github.com/metrico/quackpipe/model"
 	"regexp"
 	"strings"
 	"time"

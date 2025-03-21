@@ -1,12 +1,12 @@
 package merge
 
 import (
+	"github.com/metrico/quackpipe/config"
+	"github.com/metrico/quackpipe/merge/handlers"
+	"github.com/metrico/quackpipe/merge/repository"
+	"github.com/metrico/quackpipe/router"
+	"github.com/metrico/quackpipe/service/db"
 	"os"
-	"quackpipe/config"
-	"quackpipe/merge/handlers"
-	"quackpipe/merge/repository"
-	"quackpipe/router"
-	"quackpipe/service/db"
 )
 
 func Init() {

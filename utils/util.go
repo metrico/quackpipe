@@ -3,9 +3,9 @@ package utils
 import (
 	"bufio"
 	"database/sql"
+	"github.com/metrico/quackpipe/model"
+	"github.com/metrico/quackpipe/service/db"
 	"os"
-	"quackpipe/model"
-	"quackpipe/service/db"
 	"time"
 )
 

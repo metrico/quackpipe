@@ -3,11 +3,11 @@ package handlers
 import (
 	_ "embed"
 	"fmt"
+	"github.com/metrico/quackpipe/config"
+	"github.com/metrico/quackpipe/controller/root"
+	"github.com/metrico/quackpipe/utils"
 	"io"
 	"net/http"
-	"quackpipe/config"
-	"quackpipe/controller/root"
-	"quackpipe/utils"
 )
 
 //go:embed play.html
