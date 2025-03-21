@@ -17,7 +17,6 @@ func initFlags() *model.CommandLineFlags {
 
 	appFlags := &model.CommandLineFlags{}
 	appFlags.Host = flag.String("host", "0.0.0.0", "API host. Default 0.0.0.0")
-	appFlags.Port = flag.String("port", "8123", "API port. Default 8123")
 	appFlags.Format = flag.String("format", "JSONCompact", "API port. Default JSONCompact")
 	appFlags.Config = flag.String("config", "", "path to the configuration file")
 	appFlags.Params = flag.String("params", "", "DuckDB optional parameters. Default to none.")
@@ -30,6 +29,11 @@ func initFlags() *model.CommandLineFlags {
 
 func main() {
 	config.AppFlags = initFlags()
+	port := "8080"
+	if os.Getenv("PORT") != "" {
+		port = os.Getenv("PORT")
+	}
+	config.AppFlags.Port = &port
 	if *config.AppFlags.Stdin {
 		rows, duration, format, err := utils.ReadFromScanner(*config.AppFlags)
 		if err != nil {
