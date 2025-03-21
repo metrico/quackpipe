@@ -7,8 +7,26 @@ import (
 
 type generic[T any] struct{}
 
-func (i generic[T]) MakeStore() any {
-	return make([]T, 1000)
+func (i generic[T]) MakeStore(sizeAndCap ...int) any {
+	cp := 1000
+	sz := 0
+	if len(sizeAndCap) > 0 {
+		sz = sizeAndCap[0]
+	}
+	if len(sizeAndCap) > 1 {
+		cp = sizeAndCap[1]
+	}
+	return make([]T, sz, cp)
+}
+
+func (i generic[T]) AppendDefault(size int, store any) any {
+	defaults := make([]T, size)
+	store = append(store.([]T), defaults...)
+	return store
+}
+
+func (i generic[T]) GetLength(store any) int64 {
+	return int64(len(store.([]T)))
 }
 
 func (i generic[T]) ParseJson(dec func() (T, error), store []T) ([]T, error) {
@@ -35,14 +53,18 @@ func (i generic[T]) AppendStore(store any, data any) (any, error) {
 }
 
 func (i generic[T]) WriteToBatch(appendArray func([]T, []bool), append func(T),
-	data any, index *btree.BTreeG[int32]) error {
+	appendNull func(), data any, valid []bool, index *btree.BTreeG[int32]) error {
 	if index == nil {
-		appendArray(data.([]T), nil)
+		appendArray(data.([]T), valid)
 		return nil
 	}
 	_data := data.([]T)
 	it := index.Iter()
 	for it.Next() {
+		if !valid[it.Item()] {
+			appendNull()
+			continue
+		}
 		append(_data[it.Item()])
 	}
 	return nil

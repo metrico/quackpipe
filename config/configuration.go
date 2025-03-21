@@ -7,10 +7,13 @@ import (
 )
 
 type QuackPipeConfiguration struct {
-	Enabled       bool   `json:"enabled" mapstructure:"enabled" default:"false"`
-	Root          string `json:"root" mapstructure:"root" default:""`
-	MergeTimeoutS int    `json:"merge_timeout_s" mapstructure:"merge_timeout_s" default:"60"`
-	Secret        string `json:"secret" mapstructure:"secret" default:""`
+	Enabled       bool    `json:"enabled" mapstructure:"enabled" default:"false"`
+	Root          string  `json:"root" mapstructure:"root" default:""`
+	MergeTimeoutS int     `json:"merge_timeout_s" mapstructure:"merge_timeout_s" default:"60"`
+	Secret        string  `json:"secret" mapstructure:"secret" default:""`
+	AllowSaveToHD bool    `json:"allow_save_to_hd" mapstructure:"allow_save_to_hd" default:"true"`
+	SaveTimeoutS  float64 `json:"save_timeout_s" mapstructure:"save_timeout_s" default:"1"`
+	NoMerges      bool    `json:"no_merges" mapstructure:"no_merges" default:"false"`
 }
 
 type Configuration struct {
@@ -20,7 +23,6 @@ type Configuration struct {
 var Config *Configuration
 
 func InitConfig(file string) {
-
 	viper.SetEnvPrefix("")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
@@ -40,6 +42,9 @@ func InitConfig(file string) {
 	err := viper.Unmarshal(Config)
 	if err != nil {
 		panic(fmt.Errorf("unable to decode into struct: %s", err))
+	}
+	if Config.QuackPipe.SaveTimeoutS == 0 {
+		Config.QuackPipe.SaveTimeoutS = 1
 	}
 	fmt.Printf("Loaded configuration: %+v\n", Config)
 }

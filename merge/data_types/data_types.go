@@ -8,14 +8,38 @@ import (
 )
 
 type DataType interface {
-	MakeStore() any
+	MakeStore(sizeAndCap ...int) any
+	AppendDefault(size int, store any) any
+	GetLength(store any) int64
 	ParseJson(dec *jx.Decoder, store any) (any, error)
 	Less(store any, i int32, j int32) bool
 	ValidateData(data any) error
 	ArrowDataType() arrow.DataType
 	AppendStore(store any, data any) (any, error)
-	WriteToBatch(batch array.Builder, data any, indexes *btree.BTreeG[int32]) error
+	WriteToBatch(batch array.Builder, data any, index *btree.BTreeG[int32], valid []bool) error
+	GetName() string
 }
+
+func GoTypeToDataType(valOrCol any) (string, DataType) {
+	switch valOrCol.(type) {
+	case int64, []int64:
+		return DATA_TYPE_NAME_INT64, Int64{}
+	case uint64, []uint64:
+		return DATA_TYPE_NAME_UINT64, UInt64{}
+	case float64, []float64:
+		return DATA_TYPE_NAME_FLOAT64, Float64{}
+	case string, []string:
+		return DATA_TYPE_NAME_STRING, String{}
+	default:
+		return DATA_TYPE_NAME_UNKNOWN, UnknownType{}
+	}
+}
+
+const DATA_TYPE_NAME_INT64 = "INT8"
+const DATA_TYPE_NAME_UINT64 = "UBIGINT"
+const DATA_TYPE_NAME_FLOAT64 = "FLOAT8"
+const DATA_TYPE_NAME_STRING = "VARCHAR"
+const DATA_TYPE_NAME_UNKNOWN = "UNKNOWN"
 
 var DataTypes = map[string]DataType{
 	"Int64":  Int64{},
@@ -36,6 +60,7 @@ var DataTypes = map[string]DataType{
 	"CHAR":    String{},
 	"BPCHAR":  String{},
 	"TEXT":    String{},
+	"UNKNOWN": UnknownType{},
 
 	/*"UHUGEINT":  UInt64{},
 	"UINTEGER":  UInt64{},

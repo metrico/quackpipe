@@ -15,15 +15,19 @@ func (i String) ParseJson(dec *jx.Decoder, store any) (any, error) {
 	return i.generic.ParseJson(dec.Str, store.([]string))
 }
 
+func (i String) GetName() string {
+	return DATA_TYPE_NAME_STRING
+}
+
 func (i String) Less(a any, k int32, j int32) bool {
-	return a.([]string)[k] < a.([]string)[j]
+	return a.([]string)[k] <= a.([]string)[j]
 }
 
 func (i String) ArrowDataType() arrow.DataType {
 	return arrow.BinaryTypes.String
 }
 
-func (i String) WriteToBatch(batch array.Builder, data any, index *btree.BTreeG[int32]) error {
+func (i String) WriteToBatch(batch array.Builder, data any, index *btree.BTreeG[int32], valid []bool) error {
 	_batch := batch.(*array.StringBuilder)
-	return i.generic.WriteToBatch(_batch.AppendValues, _batch.Append, data, index)
+	return i.generic.WriteToBatch(_batch.AppendValues, _batch.Append, _batch.AppendNull, data, valid, index)
 }

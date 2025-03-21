@@ -1,38 +1,49 @@
 package merge
 
 import (
+	"os"
+	"path"
 	"quackpipe/config"
 	"quackpipe/merge/repository"
-	"quackpipe/model"
+	"quackpipe/utils/promise"
 	"testing"
+	"time"
 )
 
 func TestMerge(t *testing.T) {
+	cwd, _ := os.Getwd()
+	cwd = path.Join(cwd, "..", "_data")
+
 	config.Config = &config.Configuration{
 		QuackPipe: config.QuackPipeConfiguration{
 			Enabled:       true,
-			Root:          ".",
+			Root:          cwd,
 			MergeTimeoutS: 10,
+			SaveTimeoutS:  1,
 			Secret:        "XXXXXX",
 		},
 	}
 	Init()
-	err := repository.RegisterNewTable(&model.Table{
-		Name: "test",
-		Path: "/tmp/test",
-		Fields: [][2]string{
-			{"timestamp", "UInt64"},
-			{"value", "Float64"},
-		},
-		Engine: "Merge",
-		OrderBy: []string{
-			"timestamp",
-		},
-		TimestampField:     "timestamp",
-		TimestampPrecision: "s",
-		PartitionBy:        "timestamp / 3600 / 24",
-	})
-	if err != nil {
-		t.Fatal(err)
+
+	var p [2]*promise.Promise[int32]
+	for i := 0; i < 100; i++ {
+		p[0] = repository.Store("test", map[string]any{
+			"a": []int64{
+				time.Now().UnixNano(),
+				time.Now().UnixNano(),
+				time.Now().UnixNano(),
+				time.Now().UnixNano(),
+			},
+			"b": []string{"x", "y", "z", "w"},
+		})
+		p[1] = repository.Store("test", map[string]any{
+			"b": []string{"x", "y", "z", "w"},
+		})
+		for _, pp := range p {
+			if _, err := pp.Get(); err != nil {
+				t.Fatal(err)
+			}
+		}
+		time.Sleep(time.Second)
 	}
 }

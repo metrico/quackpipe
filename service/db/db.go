@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/marcboeker/go-duckdb" // load duckdb driver
+	_ "github.com/marcboeker/go-duckdb/v2" // load duckdb driver
 	"os"
 	"quackpipe/model"
 	"time"
@@ -67,6 +67,5 @@ func ConnectDuckDB(filePath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to connect to DuckDB: %w", err)
 	}
 
-	fmt.Println("Connected to DuckDB successfully.")
 	return db, nil
 }

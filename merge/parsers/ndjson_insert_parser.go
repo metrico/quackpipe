@@ -3,6 +3,7 @@ package parsers
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/go-faster/jx"
 	"io"
@@ -15,10 +16,10 @@ type NDJSONParser struct {
 }
 
 func (N *NDJSONParser) Parse(data []byte) (chan *ParserResponse, error) {
-	return N.ParseReader(bytes.NewReader(data))
+	return N.ParseReader(nil, bytes.NewReader(data))
 }
 
-func (N *NDJSONParser) ParseReader(r io.Reader) (chan *ParserResponse, error) {
+func (N *NDJSONParser) ParseReader(ctx context.Context, r io.Reader) (chan *ParserResponse, error) {
 	scanner := bufio.NewScanner(r)
 	scanner.Split(bufio.ScanLines)
 	N.resetLines()
@@ -74,12 +75,12 @@ func (N *NDJSONParser) parseLine(line []byte) error {
 }
 
 var _ = func() int {
-	RegisterParser("application/x-ndjson", func(fieldNames []string, fieldTypes []string) IParser {
+	/*RegisterParser("application/x-ndjson", func(fieldNames []string, fieldTypes []string) IParser {
 		fields := make(map[string]string)
 		for i, name := range fieldNames {
 			fields[name] = fieldTypes[i]
 		}
 		return &NDJSONParser{fields: fields}
-	})
+	})*/
 	return 0
 }()

@@ -44,7 +44,7 @@ func InitHandlers() {
 		Handler: handlers.CreateTableHandler,
 	})
 	router.RegisterRoute(&router.Route{
-		Path:    "/quackdb/{table}/insert",
+		Path:    "/quackdb/insert",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})

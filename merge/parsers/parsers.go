@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -12,10 +13,11 @@ var registry = make(map[string]ParserFactory)
 
 type IParser interface {
 	Parse(data []byte) (chan *ParserResponse, error)
-	ParseReader(r io.Reader) (chan *ParserResponse, error)
+	ParseReader(ctx context.Context, r io.Reader) (chan *ParserResponse, error)
 }
 
 type ParserResponse struct {
+	Table string
 	Data  map[string]any
 	Error error
 }
@@ -30,5 +32,14 @@ func GetParser(name string, fieldNames []string, fieldTypes []string) (IParser, 
 			return parser(fieldNames, fieldTypes), nil
 		}
 	}
+	if parser, ok := registry[""]; ok {
+		return parser(fieldNames, fieldTypes), nil
+	}
 	return nil, fmt.Errorf("parser %s not found", name)
+}
+
+func init() {
+	RegisterParser("", func(fieldNames []string, fieldTypes []string) IParser {
+		return &LineProtoParser{}
+	})
 }

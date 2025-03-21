@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/gorilla/mux"
+	"context"
 	"net/http"
 	"quackpipe/merge/parsers"
 	"quackpipe/merge/repository"
@@ -10,25 +10,18 @@ import (
 
 func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 	contentType := r.Header.Get("Content-Type")
-	parameters := mux.Vars(r)
-	tableName := parameters["table"]
-	table, err := repository.GetTable(tableName)
+	parser, err := parsers.GetParser(contentType, nil, nil)
+
+	ctx := r.Context()
+	precision := r.URL.Query().Get("precision")
+	if precision != "" {
+		ctx = context.WithValue(ctx, "precision", precision)
+	}
+
 	if err != nil {
 		return err
 	}
-
-	var fieldNames []string
-	var fieldTypes []string
-	for _, field := range table.Table.Fields {
-		fieldNames = append(fieldNames, field[0])
-		fieldTypes = append(fieldTypes, field[1])
-	}
-
-	parser, err := parsers.GetParser(contentType, fieldNames, fieldTypes)
-	if err != nil {
-		return err
-	}
-	res, err := parser.ParseReader(r.Body)
+	res, err := parser.ParseReader(ctx, r.Body)
 	if err != nil {
 		return err
 	}
@@ -41,7 +34,7 @@ func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 			}()
 			return _res.Error
 		}
-		promises = append(promises, table.Store(_res.Data))
+		promises = append(promises, repository.Store(_res.Table, _res.Data))
 	}
 	for _, p := range promises {
 		_, err = p.Get()
