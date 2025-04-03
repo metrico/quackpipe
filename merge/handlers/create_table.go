@@ -64,13 +64,11 @@ func CreateTableHandler(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	table := model.Table{
-		Name:               req.CreateTable,
-		Engine:             req.Engine,
-		OrderBy:            req.OrderBy,
-		TimestampField:     req.Timestamp.Field,
-		TimestampPrecision: req.Timestamp.Precision,
-		PartitionBy:        req.PartitionBy,
-		Path:               req.S3Url,
+		Name:        req.CreateTable,
+		Engine:      req.Engine,
+		OrderBy:     req.OrderBy,
+		PartitionBy: nil,
+		Path:        req.S3Url,
 	}
 	err = repository.RegisterNewTable(&table)
 	if err != nil {

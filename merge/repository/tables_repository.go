@@ -2,9 +2,7 @@ package repository
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"github.com/metrico/quackpipe/model"
 	"sync"
 )
 
@@ -38,7 +36,7 @@ func CreateDuckDBTablesTable(db *sql.DB) error {
 	return nil
 }
 
-func InsertTableMetadata(db *sql.DB, table *model.Table) error {
+/*func InsertTableMetadata(db *sql.DB, table *model.Table) error {
 	orderByJSON, err := json.Marshal(table.OrderBy)
 	if err != nil {
 		return err
@@ -76,4 +74,4 @@ func GetAllTableMetadata(db *sql.DB) ([]*model.Table, error) {
 		tables = append(tables, &table)
 	}
 	return tables, nil
-}
+}*/

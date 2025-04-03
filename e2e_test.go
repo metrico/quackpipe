@@ -4,16 +4,51 @@ import (
 	"fmt"
 	"github.com/metrico/quackpipe/config"
 	"github.com/metrico/quackpipe/merge"
+	"github.com/metrico/quackpipe/merge/repository"
 	"github.com/metrico/quackpipe/model"
 	"github.com/metrico/quackpipe/router"
-	"io"
+	"github.com/metrico/quackpipe/utils/promise"
 	"net/http"
-	"strings"
+	"os"
+	"runtime/pprof"
+	"sync"
 	"testing"
 	"time"
 )
 
+func startCPUProfile(t *testing.T) func() {
+	cpuFile, err := os.Create("cpu.pprof")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := pprof.StartCPUProfile(cpuFile); err != nil {
+		t.Fatal(err)
+	}
+	return func() {
+		pprof.StopCPUProfile()
+		cpuFile.Close()
+	}
+}
+
+func writeMemProfile(t *testing.T) {
+	memFile, err := os.Create("mem.pprof")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer memFile.Close()
+	if err := pprof.WriteHeapProfile(memFile); err != nil {
+		t.Fatal(err)
+	}
+}
+
+const N = 200
+const S = 100000
+
 func TestE2E(t *testing.T) {
+	// Start CPU profiling
+	stopCPUProfile := startCPUProfile(t)
+	defer stopCPUProfile()
+
 	config.Config = &config.Configuration{
 		QuackPipe: config.QuackPipeConfiguration{
 			Enabled:       true,
@@ -32,59 +67,45 @@ func TestE2E(t *testing.T) {
 		DBPath: toPtr("_testdata"),
 		Config: toPtr(""),
 	}
-	go runServer()
-	time.Sleep(1 * time.Second)
-	resp, err := http.Post("http://localhost:8123/quackdb/create", "application/x-yaml",
-		strings.NewReader(`create_table: test
-fields:
-  timestamp_ns: Int64
-  fingerprint: Int64
-  str: String
-  value: Float64
-engine: Merge
-order_by:
-  - timestamp_ns
-timestamp:
-  field: timestamp_ns
-  precision: ns
-partition_by: ""
-`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if resp.StatusCode != 200 {
-		t.Fatalf("[%d]: %s", resp.StatusCode, string(body))
-	}
-	fmt.Println(string(body))
+	merge.Init()
 
-	resp, err = http.Post("http://localhost:8123/quackdb/test/insert", "application/x-ndjson",
-		strings.NewReader(
-			`{"timestamp_ns": 1668326823000000000, "fingerprint": 1234567890, "str": "hello", "value": 123.456}
-{"timestamp_ns": 1668326823000000000, "fingerprint": 1234567890, "str": "hello", "value": 123.456}
-{"timestamp_ns": 1668326823000000000, "fingerprint": 1234567890, "str": "hello", "value": 123.456}
-{"timestamp_ns": 1668326823000000000, "fingerprint": 1234567890, "str": "hello", "value": 123.456}
-{"timestamp_ns": 1668326823000000000, "fingerprint": 1234567890, "str": "hello", "value": 123.456}
-{"timestamp_ns": 1668326823000000000, "fingerprint": 1234567890, "str": "hello", "value": 123.456}
-{"timestamp_ns": 1668326823000000000, "fingerprint": 1234567890, "str": "hello", "value": 123.456}
-{"timestamp_ns": 1668326823000000000, "fingerprint": 1234567890, "str": "hello", "value": 123.456}`,
-		),
-	)
-	if err != nil {
-		t.Fatal(err)
+	var data = map[string]any{
+		"timestamp": []int64{},
+		"value":     []float64{},
+		"str":       []string{},
 	}
-	defer resp.Body.Close()
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
+	promises := make([]promise.Promise[int32], N)
+	size := 0
+	for i := 0; i < S; i++ {
+		data["timestamp"] = append(data["timestamp"].([]int64), int64(time.Now().UnixNano()))
+		data["value"] = append(data["value"].([]float64), float64(i)/100.0)
+		str := fmt.Sprintf("str%d", i)
+		data["str"] = append(data["str"].([]string), str)
+		size += 8 + 8 + len(str)
 	}
-	if resp.StatusCode != 200 {
-		t.Fatalf("[%d]: %s", resp.StatusCode, string(body))
+	start := time.Now()
+	wg := sync.WaitGroup{}
+	for i := 0; i < N; i++ {
+		_i := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			//promises[_i] = repository.Store("test", data)
+		}()
+		promises[_i] = repository.Store("test", data)
 	}
-	fmt.Println(string(body))
+	wg.Wait()
+	fmt.Printf("Appending data %v\n", time.Since(start))
+	for _, pp := range promises {
+		_, err := pp.Get()
+		if err != nil {
+			panic(err)
+		}
+	}
+	fmt.Printf("%d rows / %v MB written in %v\n", S*N, float64(size*N)/(1024*1024), time.Since(start))
+	fmt.Println("Wating for merge...")
+	time.Sleep(time.Second * 20)
 
-	return
 }
 
 func toPtr[X any](val X) *X {

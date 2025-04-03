@@ -29,12 +29,13 @@ type mergeService interface {
 }
 
 type fsMergeService struct {
-	path  string
-	table *model.Table
+	dataPath string
+	tmpPath  string
+	table    *model.Table
 }
 
 func (f *fsMergeService) GetFilesToMerge(iteration int) ([]FileDesc, error) {
-	dataDir := filepath.Join(f.path, "data")
+	dataDir := f.dataPath
 	files, err := os.ReadDir(dataDir)
 	if err != nil {
 		return nil, err
@@ -151,8 +152,8 @@ func installChSql(db *sql.DB) error {
 
 func (f *fsMergeService) merge(p PlanMerge) error {
 
-	tmpFilePath := filepath.Join(f.path, "tmp", p.To)
-	finalFilePath := filepath.Join(f.path, "data", p.To)
+	tmpFilePath := filepath.Join(f.tmpPath, p.To)
+	finalFilePath := filepath.Join(f.dataPath, p.To)
 	/*
 		fmt.Printf("Merging files:\n  Base path: %s\n", f.path)
 		for _, file := range p.From {

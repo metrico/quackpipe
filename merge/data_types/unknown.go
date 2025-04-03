@@ -5,10 +5,24 @@ import (
 	"github.com/apache/arrow/go/v18/arrow"
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/go-faster/jx"
-	"github.com/tidwall/btree"
 )
 
 type UnknownType struct{}
+
+func (u UnknownType) AppendByMask(data any, toAppend any, mask []byte) (any, error) {
+	return nil, nil
+}
+
+func (u UnknownType) AppendOne(val any, data any) any {
+	return nil
+}
+
+func (u UnknownType) GetVal(i int64, store any) any {
+	return nil
+}
+func (u UnknownType) GetValI32(i int32, store any) any {
+	return nil
+}
 
 func (u UnknownType) GetName() string {
 	return DATA_TYPE_NAME_UNKNOWN
@@ -34,6 +48,10 @@ func (u UnknownType) Less(store any, i int32, j int32) bool {
 	return false
 }
 
+func (f UnknownType) BLess(a any, b any) bool {
+	return false
+}
+
 func (u UnknownType) ValidateData(data any) error {
 	return fmt.Errorf("unknown data type")
 }
@@ -46,6 +64,6 @@ func (u UnknownType) AppendStore(store any, data any) (any, error) {
 	return nil, fmt.Errorf("unknown data type")
 }
 
-func (u UnknownType) WriteToBatch(batch array.Builder, data any, indexes *btree.BTreeG[int32], valid []bool) error {
+func (u UnknownType) WriteToBatch(batch array.Builder, data any, indexes IndexType, valid []bool) error {
 	return fmt.Errorf("unknown data type")
 }

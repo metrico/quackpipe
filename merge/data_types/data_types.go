@@ -4,8 +4,9 @@ import (
 	"github.com/apache/arrow/go/v18/arrow"
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/go-faster/jx"
-	"github.com/tidwall/btree"
 )
+
+type IndexType []int32
 
 type DataType interface {
 	MakeStore(sizeAndCap ...int) any
@@ -13,11 +14,16 @@ type DataType interface {
 	GetLength(store any) int64
 	ParseJson(dec *jx.Decoder, store any) (any, error)
 	Less(store any, i int32, j int32) bool
+	BLess(a any, b any) bool
 	ValidateData(data any) error
 	ArrowDataType() arrow.DataType
 	AppendStore(store any, data any) (any, error)
-	WriteToBatch(batch array.Builder, data any, index *btree.BTreeG[int32], valid []bool) error
+	AppendOne(val any, data any) any
+	AppendByMask(data any, toAppend any, mask []byte) (any, error)
+	WriteToBatch(batch array.Builder, data any, index IndexType, valid []bool) error
 	GetName() string
+	GetVal(i int64, store any) any
+	GetValI32(i int32, store any) any
 }
 
 func GoTypeToDataType(valOrCol any) (string, DataType) {

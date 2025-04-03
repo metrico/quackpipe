@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/tidwall/btree"
 )
 
 type s3Config struct {
@@ -27,13 +26,13 @@ type s3SaveService struct {
 	s3Config
 }
 
-func (s *s3SaveService) Save(fields []fieldDesc, unorderedData map[string]*columnStore, orderedData map[string]*columnStore, index *btree.BTreeG[int32]) error {
+func (s *s3SaveService) Save(fields []fieldDesc, unorderedData, orderedData dataStore) error {
 	uid, err := uuid.NewUUID()
 	if err != nil {
 		return err
 	}
 	tmpFileName := path.Join("/tmp", uid.String()+".1.parquet")
-	err = s.saveTmpFile(tmpFileName, fields, unorderedData, orderedData, index)
+	err = s.saveTmpFile(tmpFileName, fields, unorderedData, orderedData)
 	if err != nil {
 		return err
 	}

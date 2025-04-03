@@ -8,7 +8,6 @@ import (
 	"github.com/apache/arrow/go/v18/parquet/pqarrow"
 	"github.com/google/uuid"
 	"github.com/metrico/quackpipe/merge/data_types"
-	"github.com/tidwall/btree"
 	"os"
 	"path"
 )
@@ -20,12 +19,12 @@ func (f fieldDesc) GetName() string       { return f[1] }
 func fd(tp string, name string) fieldDesc { return [2]string{tp, name} }
 
 type saveService interface {
-	Save(fields []fieldDesc, unorderedData map[string]*columnStore, orderedData map[string]*columnStore,
-		index *btree.BTreeG[int32]) error
+	Save(fields []fieldDesc, unorderedData dataStore, orderedData dataStore) error
 }
 
 type fsSaveService struct {
-	path        string
+	dataPath    string
+	tmpPath     string
 	recordBatch *array.RecordBuilder
 	schema      *arrow.Schema
 }
@@ -63,37 +62,13 @@ func (fs *fsSaveService) maybeRecreateSchema(fields []fieldDesc) {
 	fs.recordBatch = array.NewRecordBuilder(memory.DefaultAllocator, fs.schema)
 }
 
-func (fs *fsSaveService) dumpData(fields []fieldDesc, data map[string]*columnStore, index *btree.BTreeG[int32]) error {
-	var sz int64
-	for _, col := range data {
-		sz = col.tp.GetLength(col.data)
-		break
-	}
-	for _, f := range fields {
-		fieldsIdx := fs.schema.FieldIndices(f.GetName())
-		fieldIdx := fieldsIdx[0]
-		field := data[f.GetName()]
-		if field == nil {
-			fs.recordBatch.Field(fieldIdx).AppendNulls(int(sz))
-			continue
-		}
-		err := data_types.DataTypes[f.GetType()].WriteToBatch(fs.recordBatch.Field(fieldIdx), field.data,
-			index, field.valids)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (fs *fsSaveService) saveTmpFile(filename string,
-	fields []fieldDesc, unorderedData, orderedData map[string]*columnStore, index *btree.BTreeG[int32]) error {
+func (fs *fsSaveService) saveTmpFile(filename string, fields []fieldDesc, unorderedData, orderedData dataStore) error {
 	fs.maybeRecreateSchema(fields)
-	err := fs.dumpData(fields, unorderedData, nil)
+	err := unorderedData.StoreToArrow(fs.schema, fs.recordBatch)
 	if err != nil {
 		return err
 	}
-	err = fs.dumpData(fields, orderedData, index)
+	err = orderedData.StoreToArrow(fs.schema, fs.recordBatch)
 	if err != nil {
 		return err
 	}
@@ -122,20 +97,19 @@ func (fs *fsSaveService) saveTmpFile(filename string,
 	return writer.Write(record)
 }
 
-func (fs *fsSaveService) Save(fields []fieldDesc, unorderedData map[string]*columnStore,
-	orderedData map[string]*columnStore, index *btree.BTreeG[int32]) error {
+func (fs *fsSaveService) Save(fields []fieldDesc, unorderedData dataStore, orderedData dataStore) error {
 	filename, err := uuid.NewUUID()
 	if err != nil {
 		return err
 	}
-	tmpFileName := path.Join(fs.path, "tmp", filename.String()+".1.parquet")
-	fileName := path.Join(fs.path, "data", filename.String()+".1"+".parquet")
+	tmpFileName := path.Join(fs.tmpPath, filename.String()+".1.parquet")
+	fileName := path.Join(fs.dataPath, filename.String()+".1"+".parquet")
 	/*
 		fmt.Printf("Saving file:\n  FileSave path: %s\n  tmp path: %s\n  data path:  %s\n",
 			fs.path, tmpFileName, fileName)
 
 	*/
-	err = fs.saveTmpFile(tmpFileName, fields, unorderedData, orderedData, index)
+	err = fs.saveTmpFile(tmpFileName, fields, unorderedData, orderedData)
 	if err != nil {
 		return err
 	}

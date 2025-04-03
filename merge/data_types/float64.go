@@ -4,7 +4,6 @@ import (
 	"github.com/apache/arrow/go/v18/arrow"
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/go-faster/jx"
-	"github.com/tidwall/btree"
 )
 
 type Float64 struct {
@@ -23,11 +22,15 @@ func (f Float64) Less(a any, i int32, j int32) bool {
 	return a.([]float64)[i] <= a.([]float64)[j]
 }
 
+func (f Float64) BLess(a any, b any) bool {
+	return a.(float64) <= b.(float64)
+}
+
 func (f Float64) ArrowDataType() arrow.DataType {
 	return arrow.PrimitiveTypes.Float64
 }
 
-func (f Float64) WriteToBatch(batch array.Builder, data any, index *btree.BTreeG[int32], valid []bool) error {
+func (f Float64) WriteToBatch(batch array.Builder, data any, index IndexType, valid []bool) error {
 	_batch := batch.(*array.Float64Builder)
 	return f.generic.WriteToBatch(_batch.AppendValues, _batch.Append, _batch.AppendNull, data, valid, index)
 }

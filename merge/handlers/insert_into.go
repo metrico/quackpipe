@@ -25,7 +25,7 @@ func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var promises []*promise.Promise[int32]
+	var promises []promise.Promise[int32]
 	for _res := range res {
 		if _res.Error != nil {
 			go func() {
