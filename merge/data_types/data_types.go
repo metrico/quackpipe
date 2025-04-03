@@ -4,6 +4,7 @@ import (
 	"github.com/apache/arrow/go/v18/arrow"
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/go-faster/jx"
+	"sort"
 )
 
 type IndexType []int32
@@ -24,6 +25,8 @@ type DataType interface {
 	GetName() string
 	GetVal(i int64, store any) any
 	GetValI32(i int32, store any) any
+	GetSorter(data any) sort.Interface
+	GetMerger(data1 any, valid1 []bool, data2 any, valid2 []bool, s1 int64, s2 int64) IGenericMerger
 }
 
 func GoTypeToDataType(valOrCol any) (string, DataType) {
@@ -109,4 +112,16 @@ var DataTypes = map[string]DataType{
 	"TIMESTAMP":                Timestamp{},
 	"DATETIME":                 Timestamp{},
 	"UUID":                     Uuid{},*/
+}
+
+type IGenericMerger interface {
+	End() bool
+	Less() bool
+	Pick(first bool)
+	Finish()
+	Res() (any, []bool)
+	Head() (int64, bool)
+	PickArr(first bool, count int64)
+	Arranged() (arranged bool, first bool)
+	Arrange(first bool)
 }

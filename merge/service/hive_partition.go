@@ -74,6 +74,10 @@ func (p *Partition) Store(columns map[string]*model.ColumnStore) promise.Promise
 	return res
 }
 
+func (p *Partition) Size() int64 {
+	return int64(p.ordered.GetSize() + p.unordered.GetSize())
+}
+
 func (p *Partition) Save() {
 	p.m.Lock()
 	promises := p.promises

@@ -5,9 +5,18 @@ import (
 	"github.com/apache/arrow/go/v18/arrow"
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/go-faster/jx"
+	"sort"
 )
 
 type UnknownType struct{}
+
+func (u UnknownType) GetMerger(data1 any, valid1 []bool, data2 any, valid2 []bool, s1 int64, s2 int64) IGenericMerger {
+	return nil
+}
+
+func (u UnknownType) GetSorter(data any) sort.Interface {
+	return nil
+}
 
 func (u UnknownType) AppendByMask(data any, toAppend any, mask []byte) (any, error) {
 	return nil, nil

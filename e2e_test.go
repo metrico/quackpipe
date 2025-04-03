@@ -81,7 +81,7 @@ func TestE2E(t *testing.T) {
 		data["value"] = append(data["value"].([]float64), float64(i)/100.0)
 		str := fmt.Sprintf("str%d", i)
 		data["str"] = append(data["str"].([]string), str)
-		size += 8 + 8 + len(str)
+		size += 8 + 8 + 8 + 1 + len(str)
 	}
 	start := time.Now()
 	wg := sync.WaitGroup{}
@@ -90,9 +90,8 @@ func TestE2E(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			//promises[_i] = repository.Store("test", data)
+			promises[_i] = repository.Store("test", data)
 		}()
-		promises[_i] = repository.Store("test", data)
 	}
 	wg.Wait()
 	fmt.Printf("Appending data %v\n", time.Since(start))
@@ -104,7 +103,7 @@ func TestE2E(t *testing.T) {
 	}
 	fmt.Printf("%d rows / %v MB written in %v\n", S*N, float64(size*N)/(1024*1024), time.Since(start))
 	fmt.Println("Wating for merge...")
-	time.Sleep(time.Second * 20)
+	time.Sleep(time.Second * 30)
 
 }
 

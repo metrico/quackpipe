@@ -6,7 +6,6 @@ import (
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/metrico/quackpipe/merge/data_types"
 	"github.com/metrico/quackpipe/model"
-	"slices"
 	"sync"
 )
 
@@ -46,6 +45,21 @@ func (uds *unorderedDataStore) VerifyData(data map[string]*model.ColumnStore) er
 	return nil
 }
 
+func (uds *unorderedDataStore) MergeColumns(data map[string]*model.ColumnStore) []string {
+	c := map[string]bool{}
+	for k := range data {
+		c[k] = true
+	}
+	for k := range uds.store {
+		c[k] = true
+	}
+	var res []string
+	for k := range c {
+		res = append(res, k)
+	}
+	return res
+}
+
 func (uds *unorderedDataStore) AppendData(data map[string]*model.ColumnStore) error {
 	uds.mtx.Lock()
 	defer uds.mtx.Unlock()
@@ -54,18 +68,19 @@ func (uds *unorderedDataStore) AppendData(data map[string]*model.ColumnStore) er
 		sz = c.Tp.GetLength(c.Data)
 		break
 	}
-	for k, field := range data {
+	cols := uds.MergeColumns(data)
+	for _, k := range cols {
 		_, ok := uds.store[k]
 		if !ok {
-			uds.store[k] = model.NewColumnStore(field.Tp, int(uds.getSize()))
+			uds.store[k] = model.NewColumnStore(data[k].Tp, int(uds.getSize()))
 		}
-		if err := AppendColumnStore(uds.store[k], field.Data); err != nil {
+		_, ok = data[k]
+		if !ok {
+			AppendNullsColumnStore(uds.store[k], int(sz))
+			continue
+		}
+		if err := AppendColumnStore(uds.store[k], data[k].Data); err != nil {
 			return err
-		}
-	}
-	for k, field := range uds.store {
-		if _, ok := data[k]; !ok {
-			AppendNullsColumnStore(field, int(sz))
 		}
 	}
 	uds.size += int32(sz)
@@ -151,22 +166,59 @@ func (o *orderedDataStore) AppendData(data map[string]*model.ColumnStore) error 
 	if o.lessDType == nil {
 		o.lessDType = data[o.ordeByCol].Tp
 	}
-	storeSize := o.unorderedDataStore.getSize()
-	err := o.unorderedDataStore.AppendData(data)
-	if err != nil {
-		return err
-	}
-	newStoreSize := o.unorderedDataStore.getSize()
 
-	for i := storeSize; i < newStoreSize; i++ {
-		o.dataIndexes = append(o.dataIndexes, i)
-		//o.dataIndexes.Set(i)
+	var dataSize int64
+	for _, c := range data {
+		dataSize = c.Tp.GetLength(c.Data)
+		break
 	}
-	return nil
+
+	storeSize := o.unorderedDataStore.getSize()
+	var err error
+	if o.getSize() == 0 {
+		err = o.unorderedDataStore.AppendData(data)
+	} else {
+		m := DataStoreMerger{}
+		fields := o.MergeColumns(data)
+		m.names = fields
+		fieldTypes := make(map[string]data_types.DataType, len(fields))
+		for i, k := range fields {
+			var (
+				data1  any
+				valid1 []bool
+				data2  any
+				valid2 []bool
+				tp     data_types.DataType
+			)
+
+			if _, ok := o.store[k]; ok {
+				data1, valid1 = o.store[k].Data, o.store[k].Valids
+				tp = o.store[k].Tp
+			}
+			if _, ok := data[k]; ok {
+				data2, valid2 = data[k].Data, data[k].Valids
+				tp = data[k].Tp
+			}
+			fieldTypes[k] = tp
+			m.mergers = append(m.mergers, tp.GetMerger(data1, valid1, data2, valid2, int64(storeSize), dataSize))
+			if k == o.ordeByCol {
+				m.orderByCols = append(m.orderByCols, i)
+			}
+		}
+		m.Merge()
+		fields, val, valid := m.Res()
+		for i, f := range fields {
+			o.size = int32(len(valid[0]))
+			o.store[f] = &model.ColumnStore{
+				Tp:     fieldTypes[f],
+				Data:   val[i],
+				Valids: valid[i],
+			}
+		}
+	}
+	return err
 }
 
 func (o *orderedDataStore) StoreToArrow(schema *arrow.Schema, builder *array.RecordBuilder) error {
-	o.orderByStore = o.store[o.ordeByCol]
-	slices.SortFunc(o.dataIndexes, o.Less)
-	return o.storeToArrow(schema, builder, o.dataIndexes)
+	return o.storeToArrow(schema, builder, nil)
 }

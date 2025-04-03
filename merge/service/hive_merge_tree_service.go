@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"github.com/expr-lang/expr"
@@ -14,6 +15,8 @@ import (
 	"math"
 	"path"
 	"reflect"
+	"runtime"
+	"sort"
 	"sync"
 	"time"
 	"unsafe"
@@ -133,6 +136,9 @@ type HiveMergeTreeService struct {
 
 	storeTicker *time.Ticker
 	mergeTicker *time.Ticker
+
+	flushCtx context.Context
+	doFlush  context.CancelFunc
 }
 
 func NewHiveMergeTreeService(t *model.Table) (*HiveMergeTreeService, error) {
@@ -142,6 +148,7 @@ func NewHiveMergeTreeService(t *model.Table) (*HiveMergeTreeService, error) {
 		},
 		partitions: make(map[uint64]*Partition),
 	}
+	res.flushCtx, res.doFlush = context.WithTimeout(context.Background(), time.Second)
 	//err := res.parsePartitionInfo()
 	return res, nil
 }
@@ -194,10 +201,13 @@ func (h *HiveMergeTreeService) parsePartitionExpression(expression [2]string) (*
 }
 
 func (h *HiveMergeTreeService) Run() {
-	h.storeTicker = time.NewTicker(time.Second)
 	go func() {
-		for range h.storeTicker.C {
-			h.flush()
+		for {
+			select {
+			case <-h.flushCtx.Done():
+				h.flushCtx, h.doFlush = context.WithTimeout(context.Background(), time.Second)
+				h.flush()
+			}
 		}
 	}()
 	/*h.mergeTicker = time.NewTicker(time.Minute)
@@ -284,15 +294,8 @@ type shortPartDescr struct {
 
 func (h *HiveMergeTreeService) getDataPartitions(columns map[string]*model.ColumnStore,
 ) (map[uint64]*shortPartDescr, error) {
-	/*size := int64(0)
-	for _, c := range columns {
-		size = c.Tp.GetLength(c.Data)
-		break
-	}*/
-
 	res := make(map[uint64]*shortPartDescr)
 
-	//i := int64(0)
 	partsDesc, err := h.Table.PartitionBy(columns)
 	if err != nil {
 		return nil, err
@@ -328,25 +331,6 @@ func (h *HiveMergeTreeService) getDataPartitions(columns map[string]*model.Colum
 			fastFillArray(pStore[j].Valids[sizeBefore:], true)
 		}
 	}
-	/*for i = 0; i < size; i++ {
-		values, err := h.Table.PartitionBy(i, columns)
-		if err != nil {
-			return nil, err
-		}
-		partitionHash := h.calculatePartitionHash(values)
-		p, ok := res[partitionHash]
-		if !ok {
-			p = &shortPartDescr{store: make(map[string]*model.ColumnStore), values: values}
-			for col, val := range columns {
-				p.store[col] = model.NewColumnStore(val.Tp, 0)
-			}
-			res[partitionHash] = p
-		}
-		for col, val := range columns {
-			p.store[col].Data = p.store[col].Tp.AppendOne(val.Tp.GetVal(i, val.Data), p.store[col].Data)
-			p.store[col].Valids = append(p.store[col].Valids, true)
-		}
-	}*/
 	return res, nil
 }
 
@@ -358,6 +342,21 @@ func (h *HiveMergeTreeService) getDataPath(values [][2]string) string {
 	return path.Join(p...)
 }
 
+func (h *HiveMergeTreeService) sortColumns(columns map[string]*model.ColumnStore) {
+	if _, ok := columns[h.Table.OrderBy[0]]; !ok {
+		return
+	}
+	s := &DataStoreSorter{}
+	for k, col := range columns {
+		s.sorters = append(s.sorters, col.Tp.GetSorter(col.Data))
+		if k == h.Table.OrderBy[0] {
+			s.orderByCols = append(s.orderByCols, len(s.sorters)-1)
+		}
+	}
+
+	sort.Sort(s)
+}
+
 func (h *HiveMergeTreeService) Store(columns map[string]any) promise.Promise[int32] {
 	_columns := h.wrapColumns(columns)
 
@@ -367,6 +366,8 @@ func (h *HiveMergeTreeService) Store(columns map[string]any) promise.Promise[int
 	}
 
 	_columns = h.AutoTimestamp(_columns)
+
+	h.sortColumns(_columns)
 
 	partitions, err := h.getDataPartitions(_columns)
 	if err != nil {
@@ -387,10 +388,19 @@ func (h *HiveMergeTreeService) Store(columns map[string]any) promise.Promise[int
 			}
 		}
 	}
-	h.mtx.Unlock()
+
 	for id, part := range partitions {
 		promises = append(promises, h.partitions[id].Store(part.store))
 	}
+
+	s := int64(0)
+	for _, p := range h.partitions {
+		s += p.Size()
+	}
+	if s > 1000000 {
+		h.doFlush()
+	}
+	h.mtx.Unlock()
 
 	return promise.NewWaitForAll(promises)
 }
@@ -435,4 +445,84 @@ func (h *HiveMergeTreeService) DoMerge() error {
 		return err
 	}
 	return h.Merge(plan)
+}
+
+type mtHiveStoreReq struct {
+	data map[string]any
+	res  chan promise.Promise[int32]
+}
+
+type MultithreadHiveMergeTreeService struct {
+	svcs    []*HiveMergeTreeService
+	channel chan *mtHiveStoreReq
+}
+
+func NewMultithreadHiveMergeTreeService(numThreads int, t *model.Table) *MultithreadHiveMergeTreeService {
+	if numThreads <= 0 {
+		numThreads = runtime.NumCPU()
+	}
+	m := &MultithreadHiveMergeTreeService{
+		channel: make(chan *mtHiveStoreReq, numThreads),
+	}
+	for i := 0; i < numThreads; i++ {
+		h, _ := NewHiveMergeTreeService(t)
+		m.svcs = append(m.svcs, h)
+
+		go func() {
+			for _c := range m.channel {
+				_c.res <- h.Store(_c.data)
+			}
+		}()
+	}
+	return m
+}
+
+func (m *MultithreadHiveMergeTreeService) Run() {
+	for _, _m := range m.svcs {
+		_m.Run()
+	}
+}
+
+func (m *MultithreadHiveMergeTreeService) Stop() {
+	for _, _m := range m.svcs {
+		_m.Stop()
+	}
+	close(m.channel)
+}
+
+func (m *MultithreadHiveMergeTreeService) Store(columns map[string]any) promise.Promise[int32] {
+	req := &mtHiveStoreReq{
+		data: columns,
+		res:  make(chan promise.Promise[int32]),
+	}
+	defer close(req.res)
+	m.channel <- req
+	return <-req.res
+}
+
+func (m *MultithreadHiveMergeTreeService) DoMerge() error {
+	partitions := map[uint64]*Partition{}
+	for _, _m := range m.svcs {
+		for id, part := range _m.partitions {
+			partitions[id] = part
+		}
+	}
+
+	mergeByPartition := make(map[uint64][]PlanMerge)
+	for id, part := range partitions {
+		plan, err := part.PlanMerge()
+		if err != nil {
+			return err
+		}
+		mergeByPartition[id] = append(mergeByPartition[id], plan...)
+	}
+	wg := errgroup.Group{}
+	for k, p := range mergeByPartition {
+		_k := k
+		_p := p
+		wg.Go(func() error {
+			return partitions[_k].DoMerge(_p)
+		})
+	}
+	return wg.Wait()
 }

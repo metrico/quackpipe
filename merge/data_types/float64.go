@@ -4,6 +4,7 @@ import (
 	"github.com/apache/arrow/go/v18/arrow"
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/go-faster/jx"
+	"sort"
 )
 
 type Float64 struct {
@@ -33,4 +34,12 @@ func (f Float64) ArrowDataType() arrow.DataType {
 func (f Float64) WriteToBatch(batch array.Builder, data any, index IndexType, valid []bool) error {
 	_batch := batch.(*array.Float64Builder)
 	return f.generic.WriteToBatch(_batch.AppendValues, _batch.Append, _batch.AppendNull, data, valid, index)
+}
+
+func (f Float64) GetSorter(data any) sort.Interface {
+	return &GenericSorter[float64]{data: data.([]float64)}
+}
+
+func (f Float64) GetMerger(data1 any, valid1 []bool, data2 any, valid2 []bool, s1 int64, s2 int64) IGenericMerger {
+	return NewGenericMerger(data1.([]float64), data2.([]float64), valid1, valid2, s1, s2)
 }

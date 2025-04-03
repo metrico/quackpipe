@@ -190,7 +190,7 @@ func RegisterNewTable(table *model.Table) error {
 	case "Merge":
 		registry[table.Name], err = service.NewMergeTreeService(table)
 	case "HiveMerge":
-		registry[table.Name], err = service.NewHiveMergeTreeService(table)
+		registry[table.Name] = service.NewMultithreadHiveMergeTreeService(0, table)
 	}
 	if err != nil {
 		return err
