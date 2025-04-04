@@ -17,8 +17,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.84
 	github.com/prometheus/client_golang v1.20.5
 	github.com/spf13/viper v1.18.1
-	github.com/tidwall/btree v1.7.0
-	golang.org/x/sync v0.10.0
+	golang.org/x/sync v0.12.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
