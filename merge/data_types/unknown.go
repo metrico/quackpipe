@@ -10,6 +10,10 @@ import (
 
 type UnknownType struct{}
 
+func (u UnknownType) ParseFromStr(s string) (any, error) {
+	return nil, nil
+}
+
 func (u UnknownType) GetMerger(data1 any, valid1 []bool, data2 any, valid2 []bool, s1 int64, s2 int64) IGenericMerger {
 	return nil
 }

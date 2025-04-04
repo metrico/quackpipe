@@ -19,7 +19,7 @@ func (f fieldDesc) GetName() string       { return f[1] }
 func fd(tp string, name string) fieldDesc { return [2]string{tp, name} }
 
 type saveService interface {
-	Save(fields []fieldDesc, unorderedData dataStore, orderedData dataStore) error
+	Save(fields []fieldDesc, unorderedData dataStore, orderedData dataStore) (string, error)
 }
 
 type fsSaveService struct {
@@ -97,10 +97,10 @@ func (fs *fsSaveService) saveTmpFile(filename string, fields []fieldDesc, unorde
 	return writer.Write(record)
 }
 
-func (fs *fsSaveService) Save(fields []fieldDesc, unorderedData dataStore, orderedData dataStore) error {
+func (fs *fsSaveService) Save(fields []fieldDesc, unorderedData dataStore, orderedData dataStore) (string, error) {
 	filename, err := uuid.NewUUID()
 	if err != nil {
-		return err
+		return "", err
 	}
 	tmpFileName := path.Join(fs.tmpPath, filename.String()+".1.parquet")
 	fileName := path.Join(fs.dataPath, filename.String()+".1"+".parquet")
@@ -111,7 +111,7 @@ func (fs *fsSaveService) Save(fields []fieldDesc, unorderedData dataStore, order
 	*/
 	err = fs.saveTmpFile(tmpFileName, fields, unorderedData, orderedData)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return os.Rename(tmpFileName, fileName)
+	return fileName, os.Rename(tmpFileName, fileName)
 }

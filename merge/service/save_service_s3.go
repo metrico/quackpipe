@@ -26,19 +26,20 @@ type s3SaveService struct {
 	s3Config
 }
 
-func (s *s3SaveService) Save(fields []fieldDesc, unorderedData, orderedData dataStore) error {
+func (s *s3SaveService) Save(fields []fieldDesc, unorderedData, orderedData dataStore) (string, error) {
 	uid, err := uuid.NewUUID()
 	if err != nil {
-		return err
+		return "", err
 	}
-	tmpFileName := path.Join("/tmp", uid.String()+".1.parquet")
+	fName := uid.String() + ".1.parquet"
+	tmpFileName := path.Join("/tmp", fName)
 	err = s.saveTmpFile(tmpFileName, fields, unorderedData, orderedData)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer os.Remove(tmpFileName)
 
-	return s.uploadToS3(tmpFileName)
+	return fName, s.uploadToS3(tmpFileName)
 }
 
 func (s *s3SaveService) createMinioClient() (*minio.Client, error) {

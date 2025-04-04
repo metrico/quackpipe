@@ -11,14 +11,17 @@ import (
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 	"html/template"
+	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
-var CHSQL_VER = "v1.0.9"
+var CHSQL_VER = "v1.0.10"
 
 const CHSQL_EXT_URL = "https://github.com/quackscience/duckdb-extension-clickhouse-sql/releases/download/{{.VER}}/chsql.{{.DUCKDB_VER}}.{{.ARCH}}.duckdb_extension"
 
@@ -43,17 +46,29 @@ func (f *fsMergeService) GetFilesToMerge(iteration int) ([]FileDesc, error) {
 	var parquetFiles []FileDesc
 	suffix := fmt.Sprintf("%d.parquet", iteration)
 	for _, file := range files {
-		if strings.HasSuffix(file.Name(), suffix) {
-			name := filepath.Join(dataDir, file.Name())
-			stat, err := os.Stat(name)
+		if !strings.HasSuffix(file.Name(), suffix) {
+			continue
+		}
+		name := filepath.Join(dataDir, file.Name())
+		stat, err := os.Stat(name)
+		if err != nil {
+			return nil, err
+		}
+		if f.table.Index != nil {
+			abs, err := filepath.Abs(name)
 			if err != nil {
 				return nil, err
 			}
-			parquetFiles = append(parquetFiles, struct {
-				name string
-				size int64
-			}{name, stat.Size()})
+			entry := f.table.Index.Get(abs)
+			if entry == nil {
+				continue
+			}
 		}
+
+		parquetFiles = append(parquetFiles, struct {
+			name string
+			size int64
+		}{name, stat.Size()})
 	}
 	sort.Slice(parquetFiles, func(a, b int) bool {
 		return parquetFiles[a].size > parquetFiles[b].size
@@ -95,6 +110,35 @@ var tmpl = func() *template.Template {
 	}
 	return _tmpl
 }()
+
+func downloadToTempFile(url string, fname string) (string, error) {
+	// Create a temporary file
+	tmpFile, err := os.CreateTemp("", fname)
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	defer tmpFile.Close()
+
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("failed to GET from %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	// Check server response
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("bad status: %s", resp.Status)
+	}
+
+	// Write the body to file
+	_, err = io.Copy(tmpFile, resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to write to temporary file: %w", err)
+	}
+
+	return tmpFile.Name(), nil
+}
 
 func installChSql(db *sql.DB) error {
 	if CHSQL_EXT_URL == "community" {
@@ -141,7 +185,9 @@ func installChSql(db *sql.DB) error {
 
 	chsqlURL := buf.String()
 
-	_, err = db.Exec(fmt.Sprintf("INSTALL '%s'", chsqlURL))
+	fname, err := downloadToTempFile(chsqlURL, "chsql.duckdb_extension")
+
+	_, err = db.Exec(fmt.Sprintf("INSTALL '%s'", fname))
 	if err != nil {
 		return fmt.Errorf("failed to install chsql extension: %w", err)
 	}
@@ -191,11 +237,65 @@ func (f *fsMergeService) merge(p PlanMerge) error {
 	if err != nil {
 		return err
 	}
+
+	if f.table.Index != nil {
+		err = f.updateIndex(p)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, file := range p.From {
-		os.Remove(file)
+		_file := file
+		go func() {
+			<-time.After(time.Second * 30)
+			os.Remove(_file)
+		}()
 	}
 
 	return nil
+}
+
+func (f *fsMergeService) updateIndex(merge PlanMerge) error {
+	_min := make(map[string]any)
+	_max := make(map[string]any)
+	var rowCount int64
+	toDelete := make([]string, len(merge.From))
+	for i, file := range merge.From {
+		path, err := filepath.Abs(file)
+		if err != nil {
+			return err
+		}
+		toDelete[i] = path
+		fromIdx := f.table.Index.Get(path)
+		if i == 0 {
+			_min["__timestamp"] = fromIdx.Min["__timestamp"]
+			_max["__timestamp"] = fromIdx.Max["__timestamp"]
+		} else {
+			_min["__timestamp"] = min(_min["__timestamp"].(int64), fromIdx.Min["__timestamp"].(int64))
+			_max["__timestamp"] = max(_max["__timestamp"].(int64), fromIdx.Max["__timestamp"].(int64))
+		}
+		rowCount += fromIdx.RowCount
+	}
+	path, err := filepath.Abs(path.Join(f.dataPath, merge.To))
+	if err != nil {
+		return err
+	}
+	stat, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	newIdx := &model.IndexEntry{
+		Path:      path,
+		SizeBytes: stat.Size(),
+		RowCount:  rowCount,
+		ChunkTime: time.Now().UnixNano(),
+		Min:       _min,
+		Max:       _max,
+	}
+	prom := f.table.Index.Batch([]*model.IndexEntry{newIdx}, toDelete)
+	_, err = prom.Get()
+	return err
 }
 
 func (f *fsMergeService) doMerge(merges []PlanMerge, merge func(p PlanMerge) error) error {

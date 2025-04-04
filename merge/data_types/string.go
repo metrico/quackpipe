@@ -43,3 +43,7 @@ func (f String) GetSorter(data any) sort.Interface {
 func (f String) GetMerger(data1 any, valid1 []bool, data2 any, valid2 []bool, s1 int64, s2 int64) IGenericMerger {
 	return NewGenericMerger(data1.([]string), data2.([]string), valid1, valid2, s1, s2)
 }
+
+func (f String) ParseFromStr(s string) (any, error) {
+	return s, nil
+}

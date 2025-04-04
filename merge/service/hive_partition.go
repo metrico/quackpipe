@@ -4,6 +4,7 @@ import (
 	"github.com/metrico/quackpipe/model"
 	"github.com/metrico/quackpipe/utils/promise"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -20,6 +21,7 @@ type Partition struct {
 	lastStore         time.Time
 	lastSave          time.Time
 	lastIterationTime [3]time.Time
+	dataPath          string
 }
 
 func NewPartition(values [][2]string, tmpPath, dataPath string, t *model.Table) (*Partition, error) {
@@ -29,6 +31,7 @@ func NewPartition(values [][2]string, tmpPath, dataPath string, t *model.Table) 
 		ordered:           newOrderedDataStore(t.OrderBy[0]),
 		table:             t,
 		lastIterationTime: [3]time.Time{time.Now(), time.Now(), time.Now()},
+		dataPath:          dataPath,
 	}
 	err := res.initServices(tmpPath, dataPath, t)
 	return res, err
@@ -99,7 +102,48 @@ func (p *Partition) Save() {
 		return
 	}
 
-	onErr(p.saveService.Save(mergeColumns(unordered, ordered), unordered, ordered))
+	fName, err := p.saveService.Save(mergeColumns(unordered, ordered), unordered, ordered)
+	if err != nil {
+		onErr(err)
+		return
+	}
+
+	_min := make(map[string]any)
+	_max := make(map[string]any)
+	orderedLen := ordered.GetSize()
+
+	for _, k := range p.table.OrderBy {
+		_min[k] = ordered.store[k].Tp.GetVal(0, ordered.store[k].Data)
+		_max[k] = ordered.store[k].Tp.GetVal(int64(orderedLen-1), ordered.store[k].Data)
+	}
+
+	if p.table.Index != nil {
+		absDataPath, err := filepath.Abs(fName)
+		if err != nil {
+			onErr(err)
+			return
+		}
+		stat, err := os.Stat(absDataPath)
+		if err != nil {
+			onErr(err)
+			return
+		}
+
+		prom := p.table.Index.Batch([]*model.IndexEntry{{
+			Path:      absDataPath,
+			SizeBytes: stat.Size(),
+			RowCount:  int64(ordered.GetSize() + unordered.GetSize()),
+			ChunkTime: time.Now().UnixNano(),
+			Min:       _min,
+			Max:       _max,
+		}}, nil)
+		_, err = prom.Get()
+		if err != nil {
+			onErr(err)
+			return
+		}
+	}
+	onErr(nil)
 }
 
 func (p *Partition) PlanMerge() ([]PlanMerge, error) {

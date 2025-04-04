@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/metrico/quackpipe/config"
+	"github.com/metrico/quackpipe/merge/index"
 	"github.com/metrico/quackpipe/merge/service"
 	"github.com/metrico/quackpipe/model"
 	"github.com/metrico/quackpipe/service/db"
@@ -159,6 +160,12 @@ func RegisterSimpleTable(name string) error {
 		},*/
 		AutoTimestamp: true,
 	}
+	var err error
+	table.Index, err = index.NewJSONIndex(table)
+	if err != nil {
+		return err
+	}
+	table.Index.Run()
 	return RegisterNewTable(table)
 }
 

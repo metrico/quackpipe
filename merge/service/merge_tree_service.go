@@ -204,7 +204,7 @@ func (s *MergeTreeService) flush() {
 		return
 	}
 	go func() {
-		err := s.save.Save(mergeColumns(unorderedDataStore, orderedDataStore),
+		_, err := s.save.Save(mergeColumns(unorderedDataStore, orderedDataStore),
 			unorderedDataStore, orderedDataStore)
 		onError(err)
 	}()

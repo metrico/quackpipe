@@ -27,6 +27,7 @@ type DataType interface {
 	GetValI32(i int32, store any) any
 	GetSorter(data any) sort.Interface
 	GetMerger(data1 any, valid1 []bool, data2 any, valid2 []bool, s1 int64, s2 int64) IGenericMerger
+	ParseFromStr(s string) (any, error)
 }
 
 func GoTypeToDataType(valOrCol any) (string, DataType) {

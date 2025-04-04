@@ -5,6 +5,7 @@ import (
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/go-faster/jx"
 	"sort"
+	"strconv"
 )
 
 type Int64 struct {
@@ -42,4 +43,8 @@ func (f Int64) GetSorter(data any) sort.Interface {
 
 func (f Int64) GetMerger(data1 any, valid1 []bool, data2 any, valid2 []bool, s1 int64, s2 int64) IGenericMerger {
 	return NewGenericMerger(data1.([]int64), data2.([]int64), valid1, valid2, s1, s2)
+}
+
+func (f Int64) ParseFromStr(s string) (any, error) {
+	return strconv.ParseInt(s, 10, 64)
 }

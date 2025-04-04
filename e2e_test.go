@@ -103,7 +103,7 @@ func TestE2E(t *testing.T) {
 	}
 	fmt.Printf("%d rows / %v MB written in %v\n", S*N, float64(size*N)/(1024*1024), time.Since(start))
 	fmt.Println("Wating for merge...")
-	time.Sleep(time.Second * 30)
+	time.Sleep(time.Second * 60)
 
 }
 
