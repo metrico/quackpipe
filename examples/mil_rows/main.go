@@ -31,7 +31,7 @@ func main() {
 	}
 	fmt.Println("Start writing data...")
 	t := time.Now()
-	var promises []*promise.Promise[int32]
+	var promises []promise.Promise[int32]
 	for i := 0; i < 1000000; i++ {
 		data["str"] = append(data["str"].([]string), fmt.Sprintf("str%d", i))
 		data["int"] = append(data["int"].([]int64), int64(i))
@@ -52,8 +52,8 @@ func main() {
 		}
 	}
 	fmt.Printf("1M rows written in %v\n", time.Since(t))
-	fmt.Println("Waiting 15s for merge...")
-	time.Sleep(15 * time.Second)
+	fmt.Println("Waiting 30s for merge...")
+	time.Sleep(30 * time.Second)
 	dirPath := path.Join(cwd, "table1", "data")
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
