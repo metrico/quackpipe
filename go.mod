@@ -15,7 +15,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/marcboeker/go-duckdb/v2 v2.0.1
 	github.com/minio/minio-go/v7 v7.0.89
-	github.com/prometheus/client_golang v1.20.5
+	github.com/prometheus/client_golang v1.21.1
 	github.com/spf13/viper v1.18.1
 	golang.org/x/sync v0.12.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -60,7 +60,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.55.0 // indirect
+	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
