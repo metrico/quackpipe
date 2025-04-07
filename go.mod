@@ -13,7 +13,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb v1.11.8
 	github.com/json-iterator/go v1.1.12
-	github.com/marcboeker/go-duckdb/v2 v2.0.1
+	github.com/marcboeker/go-duckdb/v2 v2.1.0
 	github.com/minio/minio-go/v7 v7.0.89
 	github.com/prometheus/client_golang v1.21.1
 	github.com/spf13/viper v1.18.1
@@ -28,12 +28,12 @@ require (
 	github.com/apache/thrift v0.21.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/duckdb/duckdb-go-bindings v0.1.10 // indirect
-	github.com/duckdb/duckdb-go-bindings/darwin-amd64 v0.1.5 // indirect
-	github.com/duckdb/duckdb-go-bindings/darwin-arm64 v0.1.5 // indirect
-	github.com/duckdb/duckdb-go-bindings/linux-amd64 v0.1.5 // indirect
-	github.com/duckdb/duckdb-go-bindings/linux-arm64 v0.1.5 // indirect
-	github.com/duckdb/duckdb-go-bindings/windows-amd64 v0.1.5 // indirect
+	github.com/duckdb/duckdb-go-bindings v0.1.13 // indirect
+	github.com/duckdb/duckdb-go-bindings/darwin-amd64 v0.1.8 // indirect
+	github.com/duckdb/duckdb-go-bindings/darwin-arm64 v0.1.8 // indirect
+	github.com/duckdb/duckdb-go-bindings/linux-amd64 v0.1.8 // indirect
+	github.com/duckdb/duckdb-go-bindings/linux-arm64 v0.1.8 // indirect
+	github.com/duckdb/duckdb-go-bindings/windows-amd64 v0.1.8 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-faster/errors v0.6.1 // indirect
@@ -47,8 +47,8 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
-	github.com/marcboeker/go-duckdb/arrowmapping v0.0.3 // indirect
-	github.com/marcboeker/go-duckdb/mapping v0.0.3 // indirect
+	github.com/marcboeker/go-duckdb/arrowmapping v0.0.6 // indirect
+	github.com/marcboeker/go-duckdb/mapping v0.0.6 // indirect
 	github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8 // indirect
 	github.com/minio/c2goasm v0.0.0-20190812172519-36a3d3bbc4f3 // indirect
 	github.com/minio/crc64nvme v1.0.1 // indirect
