@@ -3,6 +3,7 @@ package index
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/metrico/quackpipe/model"
 	"github.com/metrico/quackpipe/utils/promise"
@@ -26,7 +27,8 @@ type jsonIndexEntry struct {
 }
 
 type JSONIndex struct {
-	t *model.Table
+	t       *model.Table
+	idxPath string
 
 	entries   map[string]*jsonIndexEntry
 	promises  []promise.Promise[int32]
@@ -46,6 +48,24 @@ type JSONIndex struct {
 func NewJSONIndex(t *model.Table) (model.Index, error) {
 	res := &JSONIndex{
 		t:       t,
+		idxPath: t.Path,
+		entries: make(map[string]*jsonIndexEntry),
+	}
+	err := res.populate()
+	res.updateCtx, res.doUpdate = context.WithCancel(context.Background())
+	res.workCtx, res.stop = context.WithCancel(context.Background())
+	return res, err
+}
+
+func NewJSONIndexForPartition(t *model.Table, values [][2]string) (model.Index, error) {
+	folders := make([]string, len(values)+1)
+	folders[0] = t.Path
+	for i, value := range values {
+		folders[i+1] = fmt.Sprintf("%s=%s", value[0], value[1])
+	}
+	res := &JSONIndex{
+		t:       t,
+		idxPath: path.Join(folders...),
 		entries: make(map[string]*jsonIndexEntry),
 	}
 	err := res.populate()
@@ -55,11 +75,11 @@ func NewJSONIndex(t *model.Table) (model.Index, error) {
 }
 
 func (J *JSONIndex) populate() error {
-	if _, err := os.Stat(path.Join(J.t.Path, "metadata.json")); os.IsNotExist(err) {
+	if _, err := os.Stat(path.Join(J.idxPath, "metadata.json")); os.IsNotExist(err) {
 		return nil
 	}
 
-	f, err := os.Open(path.Join(J.t.Path, "metadata.json"))
+	f, err := os.Open(path.Join(J.idxPath, "metadata.json"))
 	if err != nil {
 		return err
 	}
@@ -259,7 +279,7 @@ func (J *JSONIndex) flush() {
 		}
 	}
 
-	f, err := os.Create(path.Join(J.t.Path, "metadata.json.bak"))
+	f, err := os.Create(path.Join(J.idxPath, "metadata.json.bak"))
 	if err != nil {
 		onErr(err)
 		return
@@ -322,7 +342,7 @@ func (J *JSONIndex) flush() {
 	}
 
 	// Rename the backup file to the actual metadata file
-	err = os.Rename(path.Join(J.t.Path, "metadata.json.bak"), path.Join(J.t.Path, "metadata.json"))
+	err = os.Rename(path.Join(J.idxPath, "metadata.json.bak"), path.Join(J.idxPath, "metadata.json"))
 	if err != nil {
 		onErr(err)
 		return

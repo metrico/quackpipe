@@ -19,7 +19,7 @@ func (f fieldDesc) GetName() string       { return f[1] }
 func fd(tp string, name string) fieldDesc { return [2]string{tp, name} }
 
 type saveService interface {
-	Save(fields []fieldDesc, unorderedData dataStore, orderedData dataStore) (string, error)
+	Save(fields []fieldDesc, unorderedData dataStore) (string, error)
 }
 
 type fsSaveService struct {
@@ -54,7 +54,7 @@ func (fs *fsSaveService) maybeRecreateSchema(fields []fieldDesc) {
 	}
 	arrowFields := make([]arrow.Field, len(fields))
 	for i, field := range fields {
-		var fieldType = data_types.DataTypes[field.GetType()]
+		var fieldType, _ = data_types.DataTypes[field.GetType()](field.GetName(), nil, 0, 0)
 		arrowFields[i] = arrow.Field{Name: field.GetName(), Type: fieldType.ArrowDataType(), Nullable: true}
 	}
 
@@ -62,13 +62,9 @@ func (fs *fsSaveService) maybeRecreateSchema(fields []fieldDesc) {
 	fs.recordBatch = array.NewRecordBuilder(memory.DefaultAllocator, fs.schema)
 }
 
-func (fs *fsSaveService) saveTmpFile(filename string, fields []fieldDesc, unorderedData, orderedData dataStore) error {
+func (fs *fsSaveService) saveTmpFile(filename string, fields []fieldDesc, unorderedData dataStore) error {
 	fs.maybeRecreateSchema(fields)
 	err := unorderedData.StoreToArrow(fs.schema, fs.recordBatch)
-	if err != nil {
-		return err
-	}
-	err = orderedData.StoreToArrow(fs.schema, fs.recordBatch)
 	if err != nil {
 		return err
 	}
@@ -97,7 +93,7 @@ func (fs *fsSaveService) saveTmpFile(filename string, fields []fieldDesc, unorde
 	return writer.Write(record)
 }
 
-func (fs *fsSaveService) Save(fields []fieldDesc, unorderedData dataStore, orderedData dataStore) (string, error) {
+func (fs *fsSaveService) Save(fields []fieldDesc, unorderedData dataStore) (string, error) {
 	filename, err := uuid.NewUUID()
 	if err != nil {
 		return "", err
@@ -109,7 +105,7 @@ func (fs *fsSaveService) Save(fields []fieldDesc, unorderedData dataStore, order
 			fs.path, tmpFileName, fileName)
 
 	*/
-	err = fs.saveTmpFile(tmpFileName, fields, unorderedData, orderedData)
+	err = fs.saveTmpFile(tmpFileName, fields, unorderedData)
 	if err != nil {
 		return "", err
 	}

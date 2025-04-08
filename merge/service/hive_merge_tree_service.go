@@ -16,7 +16,6 @@ import (
 	"path"
 	"reflect"
 	"runtime"
-	"sort"
 	"sync"
 	"time"
 	"unsafe"
@@ -210,21 +209,6 @@ func (h *HiveMergeTreeService) Run() {
 			}
 		}
 	}()
-	/*h.mergeTicker = time.NewTicker(time.Minute)
-	go func() {
-		for range h.mergeTicker.C {
-			plan, err := h.PlanMerge()
-			if err != nil {
-				log.Printf("Error planning merge: %v", err)
-				continue
-			}
-			err = h.Merge(plan)
-			if err != nil {
-				log.Printf("Error merging: %v", err)
-				continue
-			}
-		}
-	}()*/
 }
 
 func (h *HiveMergeTreeService) flush() {
@@ -243,25 +227,20 @@ func (h *HiveMergeTreeService) Stop() {
 	h.storeTicker.Stop()
 }
 
-func (h *HiveMergeTreeService) calculateSchema() map[string]data_types.DataType {
+func (h *HiveMergeTreeService) calculateSchema() map[string]string {
 	h.mtx.Lock()
 	defer h.mtx.Unlock()
 
-	schema := make(map[string]data_types.DataType)
+	schema := make(map[string]string)
 	for _, part := range h.partitions {
-		names, types := part.ordered.GetSchema()
-		for i, n := range names {
-			schema[n] = types[i]
-		}
-		names, types = part.unordered.GetSchema()
-		for i, n := range names {
-			schema[n] = types[i]
+		for c, tp := range part.GetSchema() {
+			schema[c] = tp
 		}
 	}
 	return schema
 }
 
-func (h *HiveMergeTreeService) validateData(columns map[string]*model.ColumnStore) error {
+func (h *HiveMergeTreeService) validateData(columns map[string]data_types.IColumn) error {
 	err := h.validateColSizes(columns)
 	if err != nil {
 		return err
@@ -272,7 +251,11 @@ func (h *HiveMergeTreeService) validateData(columns map[string]*model.ColumnStor
 		if _, ok := schema[name]; !ok {
 			continue
 		}
-		if col.Tp.GetName() != schema[name].GetName() {
+		//TODO: check how merge operation in parquet works for column collision
+		//TODO: log this failure well
+		//TODO: if the merge operation fails because of this then consider the eralier type as "right" and later type as "wrong"
+		//TODO: move the "wrong" batches elsewhere
+		if col.GetTypeName() != schema[name] {
 			return fmt.Errorf("column %s has different data type", name)
 		}
 	}
@@ -287,53 +270,6 @@ func (h *HiveMergeTreeService) calculatePartitionHash(values [][2]string) uint64
 	return city.CH64(unsafe.Slice((*byte)(unsafe.Pointer(&valuesHashes[0])), len(valuesHashes)*8))
 }
 
-type shortPartDescr struct {
-	store  map[string]*model.ColumnStore
-	values [][2]string
-}
-
-func (h *HiveMergeTreeService) getDataPartitions(columns map[string]*model.ColumnStore,
-) (map[uint64]*shortPartDescr, error) {
-	res := make(map[uint64]*shortPartDescr)
-
-	partsDesc, err := h.Table.PartitionBy(columns)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, part := range partsDesc {
-		partitionHash := h.calculatePartitionHash(part.Values)
-		p, ok := res[partitionHash]
-
-		if !ok {
-			p = &shortPartDescr{store: make(map[string]*model.ColumnStore), values: part.Values}
-			for col, val := range columns {
-				p.store[col] = model.NewColumnStore(val.Tp, 0)
-			}
-			res[partitionHash] = p
-		}
-
-		pStore := make([]*model.ColumnStore, 0, len(columns))
-		colStore := make([]*model.ColumnStore, 0, len(columns))
-		for col := range columns {
-			pStore = append(pStore, p.store[col])
-			colStore = append(colStore, columns[col])
-		}
-
-		for j, val := range colStore {
-			sizeBefore := pStore[j].Tp.GetLength(pStore[j].Data)
-			pStore[j].Data, err = pStore[j].Tp.AppendByMask(pStore[j].Data, val.Data, part.IndexMap)
-			if err != nil {
-				return nil, err
-			}
-			sizeAfter := pStore[j].Tp.GetLength(pStore[j].Data)
-			pStore[j].Valids = append(pStore[j].Valids, make([]bool, sizeAfter-sizeBefore)...)
-			fastFillArray(pStore[j].Valids[sizeBefore:], true)
-		}
-	}
-	return res, nil
-}
-
 func (h *HiveMergeTreeService) getDataPath(values [][2]string) string {
 	p := []string{h.Table.Path}
 	for _, v := range values {
@@ -342,45 +278,36 @@ func (h *HiveMergeTreeService) getDataPath(values [][2]string) string {
 	return path.Join(p...)
 }
 
-func (h *HiveMergeTreeService) sortColumns(columns map[string]*model.ColumnStore) {
-	if _, ok := columns[h.Table.OrderBy[0]]; !ok {
-		return
-	}
-	s := &DataStoreSorter{}
-	for k, col := range columns {
-		s.sorters = append(s.sorters, col.Tp.GetSorter(col.Data))
-		if k == h.Table.OrderBy[0] {
-			s.orderByCols = append(s.orderByCols, len(s.sorters)-1)
-		}
-	}
-
-	sort.Sort(s)
-}
-
 func (h *HiveMergeTreeService) Store(columns map[string]any) promise.Promise[int32] {
-	_columns := h.wrapColumns(columns)
-
-	err := h.validateData(_columns)
+	_columns, err := h.wrapColumns(columns)
 	if err != nil {
 		return promise.Fulfilled[int32](err, 0)
 	}
 
-	_columns = h.AutoTimestamp(_columns)
+	err = h.validateData(_columns)
+	if err != nil {
+		return promise.Fulfilled[int32](err, 0)
+	}
 
-	h.sortColumns(_columns)
+	_columns, err = h.AutoTimestamp(_columns)
+	if err != nil {
+		return promise.Fulfilled[int32](err, 0)
+	}
 
-	partitions, err := h.getDataPartitions(_columns)
+	//TODO: copy data to partitions right away
+	partsDesc, err := h.Table.PartitionBy(_columns)
 	if err != nil {
 		return promise.Fulfilled[int32](err, 0)
 	}
 
 	var promises []promise.Promise[int32]
 	h.mtx.Lock()
-	for id, part := range partitions {
+	for _, part := range partsDesc {
+		id := h.calculatePartitionHash(part.Values)
 		if _, ok := h.partitions[id]; !ok {
-			h.partitions[id], err = NewPartition(part.values,
+			h.partitions[id], err = NewPartition(part.Values,
 				path.Join(h.Table.Path, "tmp"),
-				h.getDataPath(part.values),
+				h.getDataPath(part.Values),
 				h.Table)
 			if err != nil {
 				h.mtx.Unlock()
@@ -389,14 +316,16 @@ func (h *HiveMergeTreeService) Store(columns map[string]any) promise.Promise[int
 		}
 	}
 
-	for id, part := range partitions {
-		promises = append(promises, h.partitions[id].Store(part.store))
+	for _, part := range partsDesc {
+		id := h.calculatePartitionHash(part.Values)
+		promises = append(promises, h.partitions[id].StoreByMask(_columns, part.IndexMap))
 	}
 
 	s := int64(0)
 	for _, p := range h.partitions {
 		s += p.Size()
 	}
+	//TODO: add the configuration for max row limit before flush
 	if s > 1000000 {
 		h.doFlush()
 	}

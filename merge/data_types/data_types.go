@@ -1,48 +1,26 @@
 package data_types
 
 import (
+	"fmt"
 	"github.com/apache/arrow/go/v18/arrow"
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/go-faster/jx"
-	"sort"
 )
 
 type IndexType []int32
 
-type DataType interface {
-	MakeStore(sizeAndCap ...int) any
-	AppendDefault(size int, store any) any
-	GetLength(store any) int64
-	ParseJson(dec *jx.Decoder, store any) (any, error)
-	Less(store any, i int32, j int32) bool
-	BLess(a any, b any) bool
-	ValidateData(data any) error
-	ArrowDataType() arrow.DataType
-	AppendStore(store any, data any) (any, error)
-	AppendOne(val any, data any) any
-	AppendByMask(data any, toAppend any, mask []byte) (any, error)
-	WriteToBatch(batch array.Builder, data any, index IndexType, valid []bool) error
-	GetName() string
-	GetVal(i int64, store any) any
-	GetValI32(i int32, store any) any
-	GetSorter(data any) sort.Interface
-	GetMerger(data1 any, valid1 []bool, data2 any, valid2 []bool, s1 int64, s2 int64) IGenericMerger
-	ParseFromStr(s string) (any, error)
-}
-
-func GoTypeToDataType(valOrCol any) (string, DataType) {
-	switch valOrCol.(type) {
-	case int64, []int64:
-		return DATA_TYPE_NAME_INT64, Int64{}
-	case uint64, []uint64:
-		return DATA_TYPE_NAME_UINT64, UInt64{}
-	case float64, []float64:
-		return DATA_TYPE_NAME_FLOAT64, Float64{}
-	case string, []string:
-		return DATA_TYPE_NAME_STRING, String{}
-	default:
-		return DATA_TYPE_NAME_UNKNOWN, UnknownType{}
+func WrapToColumn(name string, data any) (IColumn, error) {
+	switch data.(type) {
+	case []int64:
+		return int64Builder(name, data)
+	case []uint64:
+		return uint64Builder(name, data)
+	case []float64:
+		return float64Builder(name, data)
+	case []string:
+		return strBuilder(name, data)
 	}
+	return nil, fmt.Errorf("unsupported data type: %T", data)
 }
 
 const DATA_TYPE_NAME_INT64 = "INT8"
@@ -51,26 +29,25 @@ const DATA_TYPE_NAME_FLOAT64 = "FLOAT8"
 const DATA_TYPE_NAME_STRING = "VARCHAR"
 const DATA_TYPE_NAME_UNKNOWN = "UNKNOWN"
 
-var DataTypes = map[string]DataType{
-	"Int64":  Int64{},
-	"BIGINT": Int64{},
-	"INT8":   Int64{},
-	"LONG":   Int64{},
+var DataTypes = map[string]ColumnBuilder{
+	"Int64":  int64Builder,
+	"BIGINT": int64Builder,
+	"INT8":   int64Builder,
+	"LONG":   int64Builder,
 
-	"UInt64":  UInt64{},
-	"UBIGINT": UInt64{},
+	"UInt64":  uint64Builder,
+	"UBIGINT": uint64Builder,
 
-	"Float64": Float64{},
-	"DOUBLE":  Float64{},
-	"FLOAT8":  Float64{},
+	"Float64": float64Builder,
+	"DOUBLE":  float64Builder,
+	"FLOAT8":  float64Builder,
 
-	"String":  String{},
-	"STRING":  String{},
-	"VARCHAR": String{},
-	"CHAR":    String{},
-	"BPCHAR":  String{},
-	"TEXT":    String{},
-	"UNKNOWN": UnknownType{},
+	"String":  strBuilder,
+	"STRING":  strBuilder,
+	"VARCHAR": strBuilder,
+	"CHAR":    strBuilder,
+	"BPCHAR":  strBuilder,
+	"TEXT":    strBuilder,
 
 	/*"UHUGEINT":  UInt64{},
 	"UINTEGER":  UInt64{},
@@ -115,14 +92,23 @@ var DataTypes = map[string]DataType{
 	"UUID":                     Uuid{},*/
 }
 
-type IGenericMerger interface {
-	End() bool
-	Less() bool
-	Pick(first bool)
-	Finish()
-	Res() (any, []bool)
-	Head() (int64, bool)
-	PickArr(first bool, count int64)
-	Arranged() (arranged bool, first bool)
-	Arrange(first bool)
+type IColumn interface {
+	AppendNulls(size int64)
+	GetLength() int64
+	AppendFromJson(dec *jx.Decoder) error
+	Less(i int32, j int32) bool
+	ValidateData(data any) error
+	ArrowDataType() arrow.DataType
+	Append(data any) error
+	AppendOne(val any) error
+	AppendByMask(data any, mask []byte) error
+	WriteToBatch(batch array.Builder) error
+	GetName() string
+	GetTypeName() string
+	GetVal(i int64) any
+	ParseFromStr(s string) error
+	GetData() any
+	GetMinMax() (any, any)
 }
+
+type ColumnBuilder func(name string, data any, sizeAndCap ...int64) (IColumn, error)

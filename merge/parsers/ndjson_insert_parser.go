@@ -1,12 +1,9 @@
 package parsers
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/go-faster/jx"
-	"github.com/metrico/quackpipe/merge/data_types"
 	"io"
 )
 
@@ -15,12 +12,16 @@ type NDJSONParser struct {
 	lines  map[string]any
 }
 
+var notImplementedErr = fmt.Errorf("not implemented")
+
 func (N *NDJSONParser) Parse(data []byte) (chan *ParserResponse, error) {
 	return N.ParseReader(nil, bytes.NewReader(data))
 }
 
 func (N *NDJSONParser) ParseReader(ctx context.Context, r io.Reader) (chan *ParserResponse, error) {
-	scanner := bufio.NewScanner(r)
+	return nil, notImplementedErr
+	//TODO
+	/*scanner := bufio.NewScanner(r)
 	scanner.Split(bufio.ScanLines)
 	N.resetLines()
 	res := make(chan *ParserResponse)
@@ -48,18 +49,20 @@ func (N *NDJSONParser) ParseReader(ctx context.Context, r io.Reader) (chan *Pars
 			N.resetLines()
 		}
 	}()
-	return res, nil
+	return res, nil*/
 }
 
 func (N *NDJSONParser) resetLines() {
-	N.lines = make(map[string]any)
+	// TODO
+	/*N.lines = make(map[string]any)
 	for k, v := range N.fields {
 		N.lines[k] = data_types.DataTypes[v].MakeStore()
-	}
+	}*/
 }
 
 func (N *NDJSONParser) parseLine(line []byte) error {
-	d := jx.DecodeBytes(line)
+	// TODO
+	/*d := jx.DecodeBytes(line)
 	return d.Obj(func(d *jx.Decoder, key string) error {
 		tp, ok := N.fields[key]
 		if !ok {
@@ -71,7 +74,8 @@ func (N *NDJSONParser) parseLine(line []byte) error {
 			return fmt.Errorf("invalid data for field %s: %w", key, err)
 		}
 		return nil
-	})
+	})*/
+	return notImplementedErr
 }
 
 var _ = func() int {

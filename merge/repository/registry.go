@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/metrico/quackpipe/config"
+	"github.com/metrico/quackpipe/merge/data_types"
 	"github.com/metrico/quackpipe/merge/index"
 	"github.com/metrico/quackpipe/merge/service"
 	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/service/db"
 	"github.com/metrico/quackpipe/utils/promise"
 	"os"
 	"path"
@@ -25,22 +25,6 @@ var mergeTicker *time.Ticker
 var registryMtx sync.Mutex
 
 func InitRegistry(_conn *sql.DB) error {
-	var err error
-	if _conn == nil {
-		_conn, err = db.ConnectDuckDB(config.Config.QuackPipe.Root + "/ddb.db")
-		if err != nil {
-			return err
-		}
-	}
-	conn = _conn
-	err = CreateDuckDBTablesTable(conn)
-	if err != nil {
-		return err
-	}
-	err = PopulateRegistry()
-	if err != nil {
-		return err
-	}
 	if !config.Config.QuackPipe.NoMerges {
 		go RunMerge()
 	}
@@ -81,6 +65,8 @@ var tableNameCheck = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 var m sync.Mutex
 
 func Store(name string, columns map[string]any) promise.Promise[int32] {
+	//TODO: add the thread id to the table name
+	//TODO: introduce Redis to synchronize several writers
 	m.Lock()
 	table := registry[name]
 	if table == nil {
@@ -88,7 +74,6 @@ func Store(name string, columns map[string]any) promise.Promise[int32] {
 		if err != nil {
 			m.Unlock()
 			return promise.Fulfilled(err, int32(0))
-
 		}
 		table = registry[name]
 	}
@@ -102,12 +87,12 @@ func RegisterSimpleTable(name string) error {
 		Engine:  "HiveMerge",
 		OrderBy: []string{"__timestamp"},
 		Path:    path.Join(config.Config.QuackPipe.Root, name),
-		PartitionBy: func(m map[string]*model.ColumnStore) ([]model.PartitionDesc, error) {
+		PartitionBy: func(m map[string]data_types.IColumn) ([]model.PartitionDesc, error) {
 			tsCol, ok := m["__timestamp"]
 			if !ok {
 				return nil, fmt.Errorf("table %q does not have a '__timestamp' column", name)
 			}
-			tsData, ok := tsCol.Data.([]int64)
+			tsData, ok := tsCol.GetData().([]int64)
 			if !ok {
 				return nil, fmt.Errorf("column '__timestamp' has non-int64 data type")
 			}
@@ -139,33 +124,29 @@ func RegisterSimpleTable(name string) error {
 			return res, nil
 
 		},
-
-		/*func(i int64, m map[string]*model.ColumnStore) ([][2]string, error) {
-			res := [2][2]string{{"date", ""}, {"hour", ""}}
-			tsCol, ok := m["__timestamp"]
-			if !ok {
-				return nil, fmt.Errorf("table %q does not have a '__timestamp' column", name)
-			}
-			tsData, ok := tsCol.Data.([]int64)
-			if !ok {
-				return nil, fmt.Errorf("column '__timestamp' has non-int64 data type")
-			}
-			if int64(len(tsData)) <= i {
-				return nil, fmt.Errorf("index out of range")
-			}
-			ts := time.Unix(0, tsData[i])
-			res[0][1] = ts.Format("2006-01-02")
-			res[1][1] = ts.Format("15:00")
-			return res[:], nil
-		},*/
 		AutoTimestamp: true,
 	}
-	var err error
-	table.Index, err = index.NewJSONIndex(table)
-	if err != nil {
-		return err
+	m := sync.Mutex{}
+	parts := make(map[string]model.Index)
+	table.IndexCreator = func(values [][2]string) (model.Index, error) {
+		m.Lock()
+		defer m.Unlock()
+		idxName := make([]string, len(values))
+		for i, v := range values {
+			idxName[i] = fmt.Sprintf("%s=%s", table.Name, v[0])
+		}
+		idx, ok := parts[path.Join(idxName...)]
+		if !ok {
+			idx, err := index.NewJSONIndexForPartition(table, values)
+			if err != nil {
+				return nil, err
+			}
+			parts[path.Join(idxName...)] = idx
+			idx.Run()
+			return idx, nil
+		}
+		return idx, nil
 	}
-	table.Index.Run()
 	return RegisterNewTable(table)
 }
 

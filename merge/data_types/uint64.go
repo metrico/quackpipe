@@ -4,47 +4,25 @@ import (
 	"github.com/apache/arrow/go/v18/arrow"
 	"github.com/apache/arrow/go/v18/arrow/array"
 	"github.com/go-faster/jx"
-	"sort"
 	"strconv"
 )
 
-type UInt64 struct {
-	generic[uint64]
+func newUint64Column() *Column[uint64] {
+	return &Column[uint64]{
+		typeName:  DATA_TYPE_NAME_UINT64,
+		arrowType: arrow.PrimitiveTypes.Int64,
+		getBuilder: func(builder array.Builder) IArrowAppender[uint64] {
+			return builder.(*array.Uint64Builder)
+		},
+		parseStr: func(s string) (uint64, error) {
+			return strconv.ParseUint(s, 10, 64)
+		},
+		parseJson: func(d *jx.Decoder) (uint64, error) {
+			return d.UInt64()
+		},
+	}
 }
 
-func (i UInt64) ParseJson(dec *jx.Decoder, store any) (any, error) {
-	return i.generic.ParseJson(dec.UInt64, store.([]uint64))
-}
-
-func (i UInt64) GetName() string {
-	return DATA_TYPE_NAME_UINT64
-}
-
-func (i UInt64) Less(a any, k int32, j int32) bool {
-	return a.([]uint64)[k] <= a.([]uint64)[j]
-}
-
-func (f UInt64) BLess(a any, b any) bool {
-	return a.(float64) <= b.(float64)
-}
-
-func (i UInt64) ArrowDataType() arrow.DataType {
-	return arrow.PrimitiveTypes.Uint64
-}
-
-func (i UInt64) WriteToBatch(batch array.Builder, data any, index IndexType, valid []bool) error {
-	_batch := batch.(*array.Uint64Builder)
-	return i.generic.WriteToBatch(_batch.AppendValues, _batch.Append, _batch.AppendNull, data, valid, index)
-}
-
-func (f UInt64) GetSorter(data any) sort.Interface {
-	return &GenericSorter[uint64]{data: data.([]uint64)}
-}
-
-func (f UInt64) GetMerger(data1 any, valid1 []bool, data2 any, valid2 []bool, s1 int64, s2 int64) IGenericMerger {
-	return NewGenericMerger(data1.([]uint64), data2.([]uint64), valid1, valid2, s1, s2)
-}
-
-func (f UInt64) ParseFromStr(s string) (any, error) {
-	return strconv.ParseUint(s, 10, 64)
+func uint64Builder(name string, data any, sizeAndCap ...int64) (IColumn, error) {
+	return colBuilder[uint64](newUint64Column, name, data, sizeAndCap...)
 }

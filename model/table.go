@@ -31,21 +31,7 @@ type Table struct {
 	Path          string
 	Engine        string
 	OrderBy       []string
-	PartitionBy   func(map[string]*ColumnStore) ([]PartitionDesc, error)
+	PartitionBy   func(map[string]data_types.IColumn) ([]PartitionDesc, error)
 	AutoTimestamp bool
-	Index         Index
-}
-
-type ColumnStore struct {
-	Data   any
-	Valids []bool
-	Tp     data_types.DataType
-}
-
-func NewColumnStore(tp data_types.DataType, initialSize int) *ColumnStore {
-	return &ColumnStore{
-		Data:   tp.MakeStore(initialSize),
-		Valids: make([]bool, initialSize),
-		Tp:     tp,
-	}
+	IndexCreator  func(values [][2]string) (Index, error)
 }

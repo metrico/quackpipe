@@ -26,14 +26,14 @@ type s3SaveService struct {
 	s3Config
 }
 
-func (s *s3SaveService) Save(fields []fieldDesc, unorderedData, orderedData dataStore) (string, error) {
+func (s *s3SaveService) Save(fields []fieldDesc, unorderedData dataStore) (string, error) {
 	uid, err := uuid.NewUUID()
 	if err != nil {
 		return "", err
 	}
 	fName := uid.String() + ".1.parquet"
 	tmpFileName := path.Join("/tmp", fName)
-	err = s.saveTmpFile(tmpFileName, fields, unorderedData, orderedData)
+	err = s.saveTmpFile(tmpFileName, fields, unorderedData)
 	if err != nil {
 		return "", err
 	}

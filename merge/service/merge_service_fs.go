@@ -23,7 +23,8 @@ import (
 
 var CHSQL_VER = "v1.0.10"
 
-const CHSQL_EXT_URL = "https://github.com/quackscience/duckdb-extension-clickhouse-sql/releases/download/{{.VER}}/chsql.{{.DUCKDB_VER}}.{{.ARCH}}.duckdb_extension"
+// const CHSQL_EXT_URL = "https://github.com/quackscience/duckdb-extension-clickhouse-sql/releases/download/{{.VER}}/chsql.{{.DUCKDB_VER}}.{{.ARCH}}.duckdb_extension"
+const CHSQL_EXT_URL = "community"
 
 type mergeService interface {
 	GetFilesToMerge(iteration int) ([]FileDesc, error)
@@ -35,6 +36,7 @@ type fsMergeService struct {
 	dataPath string
 	tmpPath  string
 	table    *model.Table
+	index    model.Index
 }
 
 func (f *fsMergeService) GetFilesToMerge(iteration int) ([]FileDesc, error) {
@@ -54,12 +56,12 @@ func (f *fsMergeService) GetFilesToMerge(iteration int) ([]FileDesc, error) {
 		if err != nil {
 			return nil, err
 		}
-		if f.table.Index != nil {
+		if f.index != nil {
 			abs, err := filepath.Abs(name)
 			if err != nil {
 				return nil, err
 			}
-			entry := f.table.Index.Get(abs)
+			entry := f.index.Get(abs)
 			if entry == nil {
 				continue
 			}
@@ -196,7 +198,54 @@ func installChSql(db *sql.DB) error {
 	return err
 }
 
+// TODO: ADD configuration for this
+var firstIterationSemaphore = semaphore.NewWeighted(1)
+
+func (f *fsMergeService) mergeFirstIteration(p PlanMerge) error {
+	firstIterationSemaphore.Acquire(context.Background(), 1)
+	defer firstIterationSemaphore.Release(1)
+	tmpFilePath := filepath.Join(f.tmpPath, p.To)
+	finalFilePath := filepath.Join(f.dataPath, p.To)
+	conn, err := db.ConnectDuckDB("?allow_unsigned_extensions=1")
+	if err != nil {
+		return err
+	}
+	createTableSQL := fmt.Sprintf(
+		`COPY(FROM read_parquet(ARRAY['%s'], hive_partitioning = false) ORDER BY %s)TO '%s' (FORMAT 'parquet')`,
+		strings.Join(p.From, "','"),
+		strings.Join(f.table.OrderBy, " ASC,")+" ASC", tmpFilePath)
+	_, err = conn.Exec(createTableSQL)
+	if err != nil {
+		fmt.Println("Error read_parquet_mergetree: ", err)
+		return err
+	}
+
+	err = os.Rename(tmpFilePath, finalFilePath)
+	if err != nil {
+		return err
+	}
+
+	if f.index != nil {
+		err = f.updateIndex(p)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, file := range p.From {
+		_file := file
+		go func() {
+			<-time.After(time.Second * 30)
+			os.Remove(_file)
+		}()
+	}
+	return nil
+}
+
 func (f *fsMergeService) merge(p PlanMerge) error {
+	if p.Iteration == 1 {
+		return f.mergeFirstIteration(p)
+	}
 
 	tmpFilePath := filepath.Join(f.tmpPath, p.To)
 	finalFilePath := filepath.Join(f.dataPath, p.To)
@@ -238,7 +287,7 @@ func (f *fsMergeService) merge(p PlanMerge) error {
 		return err
 	}
 
-	if f.table.Index != nil {
+	if f.index != nil {
 		err = f.updateIndex(p)
 		if err != nil {
 			return err
@@ -267,7 +316,7 @@ func (f *fsMergeService) updateIndex(merge PlanMerge) error {
 			return err
 		}
 		toDelete[i] = path
-		fromIdx := f.table.Index.Get(path)
+		fromIdx := f.index.Get(path)
 		if i == 0 {
 			_min["__timestamp"] = fromIdx.Min["__timestamp"]
 			_max["__timestamp"] = fromIdx.Max["__timestamp"]
@@ -293,7 +342,7 @@ func (f *fsMergeService) updateIndex(merge PlanMerge) error {
 		Min:       _min,
 		Max:       _max,
 	}
-	prom := f.table.Index.Batch([]*model.IndexEntry{newIdx}, toDelete)
+	prom := f.index.Batch([]*model.IndexEntry{newIdx}, toDelete)
 	_, err = prom.Get()
 	return err
 }

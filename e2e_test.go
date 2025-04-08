@@ -92,6 +92,7 @@ func TestE2E(t *testing.T) {
 			defer wg.Done()
 			promises[_i] = repository.Store("test", data)
 		}()
+
 	}
 	wg.Wait()
 	fmt.Printf("Appending data %v\n", time.Since(start))
@@ -104,7 +105,6 @@ func TestE2E(t *testing.T) {
 	fmt.Printf("%d rows / %v MB written in %v\n", S*N, float64(size*N)/(1024*1024), time.Since(start))
 	fmt.Println("Wating for merge...")
 	time.Sleep(time.Second * 60)
-
 }
 
 func toPtr[X any](val X) *X {

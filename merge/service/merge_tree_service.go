@@ -34,7 +34,6 @@ type MergeTreeService struct {
 	merge              mergeService
 	lastIterationTime  [3]time.Time
 	unorderedDataStore *unorderedDataStore
-	orderedDataStore   *orderedDataStore
 
 	less func(store any, i int32, j int32) bool
 }
@@ -46,7 +45,6 @@ func NewMergeTreeService(t *model.Table) (*MergeTreeService, error) {
 		promises: nil,
 	}
 	res.unorderedDataStore = newUnorderedDataStore()
-	res.orderedDataStore = newOrderedDataStore(t.OrderBy[0])
 	var err error
 	tablePath := t.Path
 	if tablePath == "" {
@@ -145,22 +143,21 @@ func (s *MergeTreeService) getS3Config(path string) (s3Config, error) {
 	}, nil
 }
 
-func (s *MergeTreeService) size() int32 {
-	return s.unorderedDataStore.GetSize() + s.orderedDataStore.GetSize()
+func (s *MergeTreeService) size() int64 {
+	return s.unorderedDataStore.GetSize()
 }
 
-func validateData(dataStore dataStore, data map[string]*model.ColumnStore) error {
+func validateData(dataStore dataStore, data map[string]data_types.IColumn) error {
 	var (
 		size int64
 		i    int
 	)
 	for k, field := range data {
-		_, tp := data_types.GoTypeToDataType(field)
 		if i == 0 {
-			size = tp.GetLength(field)
-		} else if size != tp.GetLength(field) {
+			size = field.GetLength()
+		} else if size != field.GetLength() {
 			return fmt.Errorf("column %s size mismatch: expected %d rows, got %d rows",
-				k, size, tp.GetLength(field))
+				k, size, field.GetLength())
 		}
 		i++
 	}
@@ -168,19 +165,11 @@ func validateData(dataStore dataStore, data map[string]*model.ColumnStore) error
 	return dataStore.VerifyData(data)
 }
 
-func mergeColumns(unordered, ordered dataStore) []fieldDesc {
-	mergedCols := make(map[string]data_types.DataType)
-	names, types := unordered.GetSchema()
-	for i, name := range names {
-		mergedCols[name] = types[i]
-	}
-	names, types = ordered.GetSchema()
-	for i, name := range names {
-		mergedCols[name] = types[i]
-	}
+func mergeColumns(unordered dataStore) []fieldDesc {
+	nameTypes := unordered.GetSchema()
 	var res []fieldDesc
-	for f, t := range mergedCols {
-		res = append(res, fd(t.GetName(), f))
+	for name, tp := range nameTypes {
+		res = append(res, fd(tp, name))
 	}
 	return res
 }
@@ -188,9 +177,7 @@ func mergeColumns(unordered, ordered dataStore) []fieldDesc {
 func (s *MergeTreeService) flush() {
 	s.mtx.Lock()
 	unorderedDataStore := s.unorderedDataStore
-	orderedDataStore := s.orderedDataStore
 	s.unorderedDataStore = newUnorderedDataStore()
-	s.orderedDataStore = newOrderedDataStore(s.Table.OrderBy[0])
 	promises := s.promises
 	s.promises = nil
 	s.mtx.Unlock()
@@ -199,13 +186,12 @@ func (s *MergeTreeService) flush() {
 			p.Done(0, err)
 		}
 	}
-	if unorderedDataStore.GetSize()+orderedDataStore.GetSize() == 0 {
+	if unorderedDataStore.GetSize() == 0 {
 		onError(nil)
 		return
 	}
 	go func() {
-		_, err := s.save.Save(mergeColumns(unorderedDataStore, orderedDataStore),
-			unorderedDataStore, orderedDataStore)
+		_, err := s.save.Save(mergeColumns(unorderedDataStore), unorderedDataStore)
 		onError(err)
 	}()
 }
@@ -234,34 +220,26 @@ func (s *MergeTreeService) Stop() {
 }
 
 func fastFillArray[T any](arr []T, data T) []T {
-	if len(arr) == 0 {
-		return arr
-	}
-	arr[0] = data
-	for i := 1; i < len(arr); i *= 2 {
-		copy(arr[i:], arr[:i])
-	}
-	return arr
+	return data_types.FastFillArray(arr, data)
 }
 
-func (s *MergeTreeService) validateColSizes(columns map[string]*model.ColumnStore) error {
+func (s *MergeTreeService) validateColSizes(columns map[string]data_types.IColumn) error {
 	var size int64
 	i := -1
 	for k, col := range columns {
 		i++
 		if i == 0 {
-			size = col.Tp.GetLength(col.Data)
+			size = col.GetLength()
 			continue
 		}
-		if size != col.Tp.GetLength(col.Data) {
-			return fmt.Errorf("column %s size mismatch: expected %d rows, got %d rows",
-				k, size, col.Tp.GetLength(col.Data))
+		if size != col.GetLength() {
+			return fmt.Errorf("column %s size mismatch: expected %d rows, got %d rows", k, size, col.GetLength())
 		}
 	}
 	return nil
 }
 
-func (s *MergeTreeService) validateData(columns map[string]*model.ColumnStore) error {
+func (s *MergeTreeService) validateData(columns map[string]data_types.IColumn) error {
 	err := s.validateColSizes(columns)
 	if err != nil {
 		return err
@@ -269,69 +247,66 @@ func (s *MergeTreeService) validateData(columns map[string]*model.ColumnStore) e
 
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	err = validateData(s.unorderedDataStore, columns)
-	if err != nil {
-		return err
-	}
-	return validateData(s.orderedDataStore, columns)
+	return validateData(s.unorderedDataStore, columns)
 }
 
-func (s *MergeTreeService) wrapColumns(columns map[string]any) map[string]*model.ColumnStore {
-	_columns := make(map[string]*model.ColumnStore, len(columns)+1)
-	var sz int
-
+func (s *MergeTreeService) wrapColumns(columns map[string]any) (map[string]data_types.IColumn, error) {
+	_columns := make(map[string]data_types.IColumn, len(columns)+1)
+	var err error
 	for k, v := range columns {
-		_, tp := data_types.GoTypeToDataType(v)
-		sz = int(tp.GetLength(v))
-		_columns[k] = &model.ColumnStore{
-			Data:   v,
-			Tp:     tp,
-			Valids: fastFillArray(make([]bool, sz), true),
+		_columns[k], err = data_types.WrapToColumn(k, v)
+		if err != nil {
+			return nil, err
 		}
+
 	}
-	return _columns
+	return _columns, nil
 }
 
-func (s *MergeTreeService) AutoTimestamp(columns map[string]*model.ColumnStore) map[string]*model.ColumnStore {
+func (s *MergeTreeService) AutoTimestamp(columns map[string]data_types.IColumn) (map[string]data_types.IColumn, error) {
 	if !s.Table.AutoTimestamp {
-		return columns
+		return columns, nil
 	}
 
-	var sz int
+	var sz int64
 	for _, col := range columns {
-		sz = int(col.Tp.GetLength(col.Data))
+		sz = col.GetLength()
 		break
 	}
 
-	tsCol := &model.ColumnStore{
-		Data:   data_types.DataTypes["INT8"].MakeStore(sz),
-		Valids: fastFillArray(make([]bool, sz), true),
-		Tp:     data_types.DataTypes["INT8"],
+	tsData := make([]int64, sz)
+	for i := range tsData {
+		tsData[i] = time.Now().UnixNano()
 	}
-	for i := 0; i < sz; i++ {
-		tsCol.Data.([]int64)[i] = time.Now().UnixNano()
+
+	tsCol, err := data_types.WrapToColumn("__timestamp", tsData)
+	if err != nil {
+		return nil, err
 	}
 	columns["__timestamp"] = tsCol
-	return columns
+	return columns, nil
 }
 
 func (s *MergeTreeService) Store(columns map[string]any) promise.Promise[int32] {
-	_columns := s.wrapColumns(columns)
-
-	err := s.validateData(_columns)
+	_columns, err := s.wrapColumns(columns)
 	if err != nil {
 		return promise.Fulfilled(err, int32(0))
 	}
 
-	_columns = s.AutoTimestamp(_columns)
+	err = s.validateData(_columns)
+	if err != nil {
+		return promise.Fulfilled(err, int32(0))
+	}
+
+	_columns, err = s.AutoTimestamp(_columns)
+	if err != nil {
+		return promise.Fulfilled(err, int32(0))
+	}
 
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	var ds dataStore = s.unorderedDataStore
-	if _, ok := _columns[s.Table.OrderBy[0]]; ok {
-		ds = s.orderedDataStore
-	}
 	err = ds.AppendData(_columns)
 	if err != nil {
 		return promise.Fulfilled(err, int32(0))

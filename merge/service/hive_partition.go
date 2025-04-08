@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/metrico/quackpipe/merge/data_types"
 	"github.com/metrico/quackpipe/model"
 	"github.com/metrico/quackpipe/utils/promise"
 	"os"
@@ -11,8 +12,8 @@ import (
 
 type Partition struct {
 	Values            [][2]string
+	index             model.Index
 	unordered         *unorderedDataStore
-	ordered           *orderedDataStore
 	saveService       saveService
 	mergeService      mergeService
 	promises          []promise.Promise[int32]
@@ -28,10 +29,16 @@ func NewPartition(values [][2]string, tmpPath, dataPath string, t *model.Table) 
 	res := &Partition{
 		Values:            values,
 		unordered:         newUnorderedDataStore(),
-		ordered:           newOrderedDataStore(t.OrderBy[0]),
 		table:             t,
 		lastIterationTime: [3]time.Time{time.Now(), time.Now(), time.Now()},
 		dataPath:          dataPath,
+	}
+	if t.IndexCreator != nil {
+		var err error
+		res.index, err = t.IndexCreator(values)
+		if err != nil {
+			return nil, err
+		}
 	}
 	err := res.initServices(tmpPath, dataPath, t)
 	return res, err
@@ -55,19 +62,34 @@ func (p *Partition) initServices(tmpPath, dataPath string, t *model.Table) error
 		dataPath: dataPath,
 		tmpPath:  tmpPath,
 		table:    t,
+		index:    p.index,
 	}
 	return nil
 }
 
-func (p *Partition) Store(columns map[string]*model.ColumnStore) promise.Promise[int32] {
+func (p *Partition) GetSchema() map[string]string {
+	//TODO: create map[columnName]columnTypename
+	return nil
+}
+
+func (p *Partition) StoreByMask(data map[string]data_types.IColumn, mask []byte) promise.Promise[int32] {
+	p.m.Lock()
+	defer p.m.Unlock()
+	err := p.unordered.AppendByMask(data, mask)
+	if err != nil {
+		return promise.Fulfilled(err, int32(0))
+	}
+	res := promise.New[int32]()
+	p.promises = append(p.promises, res)
+	p.lastStore = time.Now()
+	return res
+}
+
+func (p *Partition) Store(data map[string]data_types.IColumn) promise.Promise[int32] {
 	p.m.Lock()
 	defer p.m.Unlock()
 	var err error
-	if _, ok := columns[p.table.OrderBy[0]]; ok {
-		err = p.ordered.AppendData(columns)
-	} else {
-		err = p.unordered.AppendData(columns)
-	}
+	err = p.unordered.AppendData(data)
 	if err != nil {
 		return promise.Fulfilled(err, int32(0))
 	}
@@ -78,7 +100,7 @@ func (p *Partition) Store(columns map[string]*model.ColumnStore) promise.Promise
 }
 
 func (p *Partition) Size() int64 {
-	return int64(p.ordered.GetSize() + p.unordered.GetSize())
+	return p.unordered.GetSize()
 }
 
 func (p *Partition) Save() {
@@ -87,8 +109,6 @@ func (p *Partition) Save() {
 	p.promises = nil
 	unordered := p.unordered
 	p.unordered = newUnorderedDataStore()
-	ordered := p.ordered
-	p.ordered = newOrderedDataStore(p.table.OrderBy[0])
 	p.lastSave = time.Now()
 	p.m.Unlock()
 
@@ -101,8 +121,8 @@ func (p *Partition) Save() {
 	if len(promises) == 0 {
 		return
 	}
-
-	fName, err := p.saveService.Save(mergeColumns(unordered, ordered), unordered, ordered)
+	//TODO: remove the logic of dynamic schema
+	fName, err := p.saveService.Save(mergeColumns(unordered), unordered)
 	if err != nil {
 		onErr(err)
 		return
@@ -110,14 +130,12 @@ func (p *Partition) Save() {
 
 	_min := make(map[string]any)
 	_max := make(map[string]any)
-	orderedLen := ordered.GetSize()
 
-	for _, k := range p.table.OrderBy {
-		_min[k] = ordered.store[k].Tp.GetVal(0, ordered.store[k].Data)
-		_max[k] = ordered.store[k].Tp.GetVal(int64(orderedLen-1), ordered.store[k].Data)
+	if col, ok := p.unordered.store[p.table.OrderBy[0]]; ok {
+		_min[p.table.OrderBy[0]], _max[p.table.OrderBy[0]] = col.GetMinMax()
 	}
 
-	if p.table.Index != nil {
+	if p.index != nil {
 		absDataPath, err := filepath.Abs(fName)
 		if err != nil {
 			onErr(err)
@@ -129,10 +147,10 @@ func (p *Partition) Save() {
 			return
 		}
 
-		prom := p.table.Index.Batch([]*model.IndexEntry{{
+		prom := p.index.Batch([]*model.IndexEntry{{
 			Path:      absDataPath,
 			SizeBytes: stat.Size(),
-			RowCount:  int64(ordered.GetSize() + unordered.GetSize()),
+			RowCount:  unordered.GetSize(),
 			ChunkTime: time.Now().UnixNano(),
 			Min:       _min,
 			Max:       _max,
@@ -150,8 +168,8 @@ func (p *Partition) PlanMerge() ([]PlanMerge, error) {
 	var res []PlanMerge
 
 	configurations := [][3]int64{
-		{10, 4000 * 1024 * 1024, 1},
-		{100, 4000 * 1024 * 1024, 2},
+		{10, 100 * 1024 * 1024, 1},
+		{100, 400 * 1024 * 1024, 2},
 		{1000, 4000 * 1024 * 1024, 3},
 	}
 	for _, conf := range configurations {
