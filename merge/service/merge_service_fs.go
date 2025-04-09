@@ -211,7 +211,7 @@ func (f *fsMergeService) mergeFirstIteration(p PlanMerge) error {
 		return err
 	}
 	createTableSQL := fmt.Sprintf(
-		`COPY(FROM read_parquet(ARRAY['%s'], hive_partitioning = false) ORDER BY %s)TO '%s' (FORMAT 'parquet')`,
+		`COPY(FROM read_parquet(ARRAY['%s'], hive_partitioning = false, union_by_name = true) ORDER BY %s)TO '%s' (FORMAT 'parquet')`,
 		strings.Join(p.From, "','"),
 		strings.Join(f.table.OrderBy, " ASC,")+" ASC", tmpFilePath)
 	_, err = conn.Exec(createTableSQL)

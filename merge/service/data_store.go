@@ -72,6 +72,7 @@ func (uds *unorderedDataStore) AppendByMask(data map[string]data_types.IColumn, 
 	for _, k := range nullFields {
 		uds.store[k].AppendNulls(dataSize)
 	}
+	uds.size = sizeAfter
 	return nil
 }
 

@@ -131,7 +131,7 @@ func (p *Partition) Save() {
 	_min := make(map[string]any)
 	_max := make(map[string]any)
 
-	if col, ok := p.unordered.store[p.table.OrderBy[0]]; ok {
+	if col, ok := unordered.store[p.table.OrderBy[0]]; ok {
 		_min[p.table.OrderBy[0]], _max[p.table.OrderBy[0]] = col.GetMinMax()
 	}
 
@@ -147,10 +147,12 @@ func (p *Partition) Save() {
 			return
 		}
 
+		size := unordered.GetSize()
+
 		prom := p.index.Batch([]*model.IndexEntry{{
 			Path:      absDataPath,
 			SizeBytes: stat.Size(),
-			RowCount:  unordered.GetSize(),
+			RowCount:  size,
 			ChunkTime: time.Now().UnixNano(),
 			Min:       _min,
 			Max:       _max,
