@@ -1,3 +1,5 @@
+name: Release
+
 on:
   release:
     types: [created]
@@ -27,8 +29,8 @@ jobs:
         goversion: "https://dl.google.com/go/go1.23.1.linux-amd64.tar.gz"
         pre_command: export CGO_ENABLED=1
         project_path: "."
-        binary_name: "quackpipe"
-        asset_name: quackpipe-${{ matrix.goarch }}
+        binary_name: "gigapi"
+        asset_name: gigapi-${{ matrix.goarch }}
         executable_compression: upx
         compress_assets: OFF
         build_flags: -buildvcs=false
