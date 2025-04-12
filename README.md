@@ -41,16 +41,16 @@ services:
 ## <img src="https://github.com/user-attachments/assets/74a1fa93-5e7e-476d-93cb-be565eca4a59" height=20 /> Write Support
 As write requests come in to GigAPI they are parsed and progressively appeanded to parquet files alongside their metadata. The ingestion buffer is flushed to disk at configurable intervals using a hive partitioning schema. Generated parquet files and their respective metadata are progressively compacted and sorted over time based on configuration parameters.
 
-```
+### <img src="https://github.com/user-attachments/assets/a9aa3ebd-9164-476d-aedf-97b817078350" width=18 /> API
+GigAPI provides an HTTP API for clients to write, currently supporting the InfluxDB Line Protocol format 
+
+```bash
 cat <<EOF | curl -X POST http://localhost:8080/quackdb/insert --data-binary @/dev/stdin
 weather,location=us-midwest,season=summer temperature=82
 weather,location=us-east,season=summer temperature=80
 weather,location=us-west,season=summer temperature=99
 EOF
 ```
-
-### <img src="https://github.com/user-attachments/assets/a9aa3ebd-9164-476d-aedf-97b817078350" width=18 /> API
-GigAPI provides an HTTP API for clients to write, currently supporting the InfluxDB Line Protocol format 
 
 * _more ingestion protocols coming soon_
 
