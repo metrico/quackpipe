@@ -10,8 +10,44 @@ GigAPI eliminates classic storage and server limits, unlocking virtually infinit
 
 > Coming Soon
 
+```yml
+services:
+  gigapi:
+    image: ghcr.io/gigapi/gigapi:latest
+    container_name: gigapi
+    hostname: gigapi
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    ports:
+      - "8080:8080"
+    environment:
+      - QUACK_PIPE_ENABLED=true
+      - QUACK_PIPE_MERGE_TIMEOUT_S=10
+      - QUACK_PIPE_ROOT=/data
+  gigapi-querier:
+    image: ghcr.io/gigapi/gigapi-querier:latest
+    container_name: gigapi-querier
+    hostname: gigapi-querier
+    volumes:
+      - ./data:/data
+    ports:
+      - "8082:8082"
+    environment:
+      - DATA_DIR=/data
+      - PORT=8082
+```
+
 ## <img src="https://github.com/user-attachments/assets/74a1fa93-5e7e-476d-93cb-be565eca4a59" height=20 /> Write Support
 As write requests come in to GigAPI they are parsed and progressively appeanded to parquet files alongside their metadata. The ingestion buffer is flushed to disk at configurable intervals using a hive partitioning schema. Generated parquet files and their respective metadata are progressively compacted and sorted over time based on configuration parameters.
+
+```
+cat <<EOF | curl -X POST http://localhost:8080/quackdb/insert --data-binary @/dev/stdin
+weather,location=us-midwest,season=summer temperature=82
+weather,location=us-east,season=summer temperature=80
+weather,location=us-west,season=summer temperature=99
+EOF
+```
 
 ### <img src="https://github.com/user-attachments/assets/a9aa3ebd-9164-476d-aedf-97b817078350" width=18 /> API
 GigAPI provides an HTTP API for clients to write, currently supporting the InfluxDB Line Protocol format 
