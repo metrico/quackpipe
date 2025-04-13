@@ -2,9 +2,13 @@
 
 # <img src="https://github.com/user-attachments/assets/74a1fa93-5e7e-476d-93cb-be565eca4a59" height=25 /> GigAPI Storage Engine
 
-Like a durable parquet floor, GigAPI provides rock-solid data foundation — so you can focus on queries and forget infrastructure. 
+Like a durable parquet floor, GigAPI provides rock-solid data foundation — so you can focus on queries not infrastructure. 
 
 GigAPI eliminates classic storage and server limits, unlocking virtually infinite cardinality without compromising query speed and performance. Its DuckDB and Arrow powered engine handles massive parallel ingestion and self-compation of data for heavy aggregations and complex SQL queries, delivering consistent performance as your system scales without storage or cardinality limitations and price tag
+
+
+> [!WARNING]  
+> GigAPI is an open beta developed in public. Bugs and changes should be expected. Use at your own risk.
 
 ## <img src="https://github.com/user-attachments/assets/74a1fa93-5e7e-476d-93cb-be565eca4a59" height=20 /> Usage
 
