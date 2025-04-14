@@ -67,7 +67,8 @@ weather,location=us-west,season=summer temperature=99
 EOF
 ```
 
-* _more ingestion protocols coming soon_
+> [!NOTE]
+> _more ingestion protocols coming soon!_
 
 ### <img src="https://github.com/user-attachments/assets/a9aa3ebd-9164-476d-aedf-97b817078350" width=18 /> Data Schema
 GigAPI is a schema-on-write database managing databases, tables and schemas on the fly. New columns can be added or removed over time, leaving reconciliation up to readers.
