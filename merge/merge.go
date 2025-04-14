@@ -39,12 +39,17 @@ func Init() {
 
 func InitHandlers() {
 	router.RegisterRoute(&router.Route{
-		Path:    "/quackdb/create",
+		Path:    "/gigapi/create",
 		Methods: []string{"POST"},
 		Handler: handlers.CreateTableHandler,
 	})
 	router.RegisterRoute(&router.Route{
-		Path:    "/quackdb/insert",
+		Path:    "/gigapi/insert",
+		Methods: []string{"POST"},
+		Handler: handlers.InsertIntoHandler,
+	})
+	router.RegisterRoute(&router.Route{
+		Path:    "/write",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
