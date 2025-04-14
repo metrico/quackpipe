@@ -85,7 +85,7 @@ GigAPI is a schema-on-write database managing databases, tables and schemas on t
 ```
 
 ### <img src="https://github.com/user-attachments/assets/a9aa3ebd-9164-476d-aedf-97b817078350" width=18 /> Parquet Compactor
-GigAPI files are progressively compacted based on the following logic _(subject to changes, transparent to users)_
+GigAPI files are progressively compacted based on the following logic _(subject to future changes)_
 
 
 | Merge Level   | Source | Target | Frequency              | Max Size | File Composition  |
