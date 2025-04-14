@@ -50,7 +50,7 @@ services:
 | GIGAPI_MERGE_TIMEOUT_S | Merge timeout in seconds                    | 10                  |
 | GIGAPI_SAVE_TIMEOUT_S  | Save timeout in seconds                     | 1.0                 |
 | GIGAPI_NO_MERGES       | Disables merges when set to true            | false               |
-| PORT                   | Port number for the server to listen on     | 8080                |
+| PORT                   | Port number for the server to listen on     | 7971                |
 
 
 ## <img src="https://github.com/user-attachments/assets/74a1fa93-5e7e-476d-93cb-be565eca4a59" height=20 /> Write Support
@@ -60,7 +60,7 @@ As write requests come in to GigAPI they are parsed and progressively appeanded 
 GigAPI provides an HTTP API for clients to write, currently supporting the InfluxDB Line Protocol format 
 
 ```bash
-cat <<EOF | curl -X POST http://localhost:7971/quackdb/insert --data-binary @/dev/stdin
+cat <<EOF | curl -X POST http://localhost:7971/write --data-binary @/dev/stdin
 weather,location=us-midwest,season=summer temperature=82
 weather,location=us-east,season=summer temperature=80
 weather,location=us-west,season=summer temperature=99
