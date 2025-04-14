@@ -6,6 +6,13 @@ Like a durable parquet floor, GigAPI provides rock-solid data foundation for you
 
 > GigAPI by Gigapipe is our twist on future query engines – one where you focus on your data, not your infrastructure, servers or capacity. By combining the performance of DuckDB with cloud-native architecture principles we've created a simple and light solution designed for unlimited time series and analytical datasets that makes traditional server-based OLAP databases feel like costly relics and decimating infrastructure costs by 50-90% without performance loss. All 100% opensource - no open core cloud gimmicks.
 
+#### <img src="https://github.com/user-attachments/assets/a9aa3ebd-9164-476d-aedf-97b817078350" width=18 /> Features
+
+* DuckDB SQL + Parquet OLAP API Engine
+* Schema-less Ingestion & Compaction
+* Low Maintenance, Portable, Scalable
+* Cloud Native, Serverless Design
+
 > [!WARNING]  
 > GigAPI is an open beta developed in public. Bugs and changes should be expected. Use at your own risk.
 > 
