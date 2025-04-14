@@ -12,13 +12,13 @@ GigAPI eliminates classic storage and server limits, unlocking virtually infinit
 > 
 ## Configuration
 
-| Env Var Name               | Description                                 | Default Value       |
-|----------------------------|---------------------------------------------|---------------------|
-| QUACK_PIPE_ROOT            | Root directory for the databases and tables | <current directory> |
-| QUACK_PIPE_MERGE_TIMEOUT_S | Merge timeout in seconds                    | 10                  |
-| QUACK_PIPE_SAVE_TIMEOUT_S  | Save timeout in seconds                     | 1.0                 |
-| QUACK_PIPE_NO_MERGES       | Disables merges when set to true            | false               |
-| PORT                       | Port number for the server to listen on     | 8080                |
+| Env Var Name           | Description                                 | Default Value       |
+|------------------------|---------------------------------------------|---------------------|
+| GIGAPI_ROOT            | Root directory for the databases and tables | <current directory> |
+| GIGAPI_MERGE_TIMEOUT_S | Merge timeout in seconds                    | 10                  |
+| GIGAPI_SAVE_TIMEOUT_S  | Save timeout in seconds                     | 1.0                 |
+| GIGAPI_NO_MERGES       | Disables merges when set to true            | false               |
+| PORT                   | Port number for the server to listen on     | 8080                |
 
 ## <img src="https://github.com/user-attachments/assets/74a1fa93-5e7e-476d-93cb-be565eca4a59" height=20 /> Usage
 
@@ -36,9 +36,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - QUACK_PIPE_ENABLED=true
-      - QUACK_PIPE_MERGE_TIMEOUT_S=10
-      - QUACK_PIPE_ROOT=/data
+      - GIGAPI_ENABLED=true
+      - GIGAPI_MERGE_TIMEOUT_S=10
+      - GIGAPI_ROOT=/data
   gigapi-querier:
     image: ghcr.io/gigapi/gigapi-querier:latest
     container_name: gigapi-querier

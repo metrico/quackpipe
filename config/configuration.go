@@ -17,7 +17,7 @@ type QuackPipeConfiguration struct {
 }
 
 type Configuration struct {
-	QuackPipe QuackPipeConfiguration `json:"quack_pipe" mapstructure:"quack_pipe" default:""`
+	QuackPipe QuackPipeConfiguration `json:"gigapi" mapstructure:"gigapi" default:""`
 }
 
 var Config *Configuration
