@@ -10,15 +10,6 @@ GigAPI eliminates classic storage and server limits, unlocking virtually infinit
 > [!WARNING]  
 > GigAPI is an open beta developed in public. Bugs and changes should be expected. Use at your own risk.
 > 
-## Configuration
-
-| Env Var Name           | Description                                 | Default Value       |
-|------------------------|---------------------------------------------|---------------------|
-| GIGAPI_ROOT            | Root directory for the databases and tables | <current directory> |
-| GIGAPI_MERGE_TIMEOUT_S | Merge timeout in seconds                    | 10                  |
-| GIGAPI_SAVE_TIMEOUT_S  | Save timeout in seconds                     | 1.0                 |
-| GIGAPI_NO_MERGES       | Disables merges when set to true            | false               |
-| PORT                   | Port number for the server to listen on     | 8080                |
 
 ## <img src="https://github.com/user-attachments/assets/74a1fa93-5e7e-476d-93cb-be565eca4a59" height=20 /> Usage
 
@@ -39,6 +30,7 @@ services:
       - GIGAPI_ENABLED=true
       - GIGAPI_MERGE_TIMEOUT_S=10
       - GIGAPI_ROOT=/data
+      - PORT=8080
   gigapi-querier:
     image: ghcr.io/gigapi/gigapi-querier:latest
     container_name: gigapi-querier
@@ -51,6 +43,16 @@ services:
       - DATA_DIR=/data
       - PORT=8082
 ```
+### <img src="https://github.com/user-attachments/assets/a9aa3ebd-9164-476d-aedf-97b817078350" width=18 /> Settings
+
+| Env Var Name           | Description                                 | Default Value       |
+|------------------------|---------------------------------------------|---------------------|
+| GIGAPI_ROOT            | Root directory for the databases and tables | <current directory> |
+| GIGAPI_MERGE_TIMEOUT_S | Merge timeout in seconds                    | 10                  |
+| GIGAPI_SAVE_TIMEOUT_S  | Save timeout in seconds                     | 1.0                 |
+| GIGAPI_NO_MERGES       | Disables merges when set to true            | false               |
+| PORT                   | Port number for the server to listen on     | 8080                |
+
 
 ## <img src="https://github.com/user-attachments/assets/74a1fa93-5e7e-476d-93cb-be565eca4a59" height=20 /> Write Support
 As write requests come in to GigAPI they are parsed and progressively appeanded to parquet files alongside their metadata. The ingestion buffer is flushed to disk at configurable intervals using a hive partitioning schema. Generated parquet files and their respective metadata are progressively compacted and sorted over time based on configuration parameters.
