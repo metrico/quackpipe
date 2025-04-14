@@ -24,12 +24,12 @@ services:
     volumes:
       - ./data:/data
     ports:
-      - "8080:8080"
+      - "7971:7971"
     environment:
       - GIGAPI_ENABLED=true
       - GIGAPI_MERGE_TIMEOUT_S=10
       - GIGAPI_ROOT=/data
-      - PORT=8080
+      - PORT=7971
   gigapi-querier:
     image: ghcr.io/gigapi/gigapi-querier:latest
     container_name: gigapi-querier
@@ -37,10 +37,10 @@ services:
     volumes:
       - ./data:/data
     ports:
-      - "8082:8082"
+      - "7972:7972"
     environment:
       - DATA_DIR=/data
-      - PORT=8082
+      - PORT=7972
 ```
 ### <img src="https://github.com/user-attachments/assets/a9aa3ebd-9164-476d-aedf-97b817078350" width=18 /> Settings
 
@@ -60,7 +60,7 @@ As write requests come in to GigAPI they are parsed and progressively appeanded 
 GigAPI provides an HTTP API for clients to write, currently supporting the InfluxDB Line Protocol format 
 
 ```bash
-cat <<EOF | curl -X POST http://localhost:8080/quackdb/insert --data-binary @/dev/stdin
+cat <<EOF | curl -X POST http://localhost:7971/quackdb/insert --data-binary @/dev/stdin
 weather,location=us-midwest,season=summer temperature=82
 weather,location=us-east,season=summer temperature=80
 weather,location=us-west,season=summer temperature=99
@@ -105,7 +105,7 @@ GigAPI Parquet files use the following naming schema:
 As read requests come in to GigAPI they are parsed and transpiled using the GigAPI Metadata catalog to resolve data location based on database, table and timerange in requests. Series can be used with or without time ranges, ie for calculating averages, etc.
 
 ```bash
-$ curl -X POST "http://localhost:9999/query?db=mydb" \
+$ curl -X POST "http://localhost:7972/query?db=mydb" \
   -H "Content-Type: application/json"  \
   -d '{"query": "SELECT count(*), avg(temperature) FROM weather"}'
 ```
