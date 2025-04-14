@@ -50,13 +50,10 @@ func main() {
 		return
 	}
 	config.InitConfig(*config.AppFlags.Config)
-	if config.Config.QuackPipe.Enabled {
-		merge.Init()
-	}
+	merge.Init()
 	r := router.NewRouter(config.AppFlags)
 	fmt.Printf("QuackPipe API Running: %s:%s\n", *config.AppFlags.Host, *config.AppFlags.Port)
 	if err := http.ListenAndServe(*config.AppFlags.Host+":"+*config.AppFlags.Port, r); err != nil {
 		panic(err)
 	}
-
 }

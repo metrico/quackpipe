@@ -169,11 +169,7 @@ func (p *Partition) Save() {
 func (p *Partition) PlanMerge() ([]PlanMerge, error) {
 	var res []PlanMerge
 
-	configurations := [][3]int64{
-		{10, 100 * 1024 * 1024, 1},
-		{100, 400 * 1024 * 1024, 2},
-		{1000, 4000 * 1024 * 1024, 3},
-	}
+	configurations := getMergeConfigurations()
 	for _, conf := range configurations {
 		if time.Now().Sub(p.lastIterationTime[conf[2]-1]).Seconds() > float64(conf[0]) {
 			files, err := p.mergeService.GetFilesToMerge(int(conf[2]))

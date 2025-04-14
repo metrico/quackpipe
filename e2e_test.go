@@ -51,7 +51,6 @@ func TestE2E(t *testing.T) {
 
 	config.Config = &config.Configuration{
 		QuackPipe: config.QuackPipeConfiguration{
-			Enabled:       true,
 			Root:          "_testdata",
 			MergeTimeoutS: 10,
 			Secret:        "XXXXXX",
@@ -90,7 +89,7 @@ func TestE2E(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			promises[_i] = repository.Store("test", data)
+			promises[_i] = repository.Store("", "test", data)
 		}()
 
 	}
@@ -112,9 +111,7 @@ func toPtr[X any](val X) *X {
 }
 
 func runServer() {
-	if config.Config.QuackPipe.Enabled {
-		merge.Init()
-	}
+	merge.Init()
 	r := router.NewRouter(config.AppFlags)
 	fmt.Printf("QuackPipe API Running: %s:%s\n", *config.AppFlags.Host, *config.AppFlags.Port)
 	if err := http.ListenAndServe(*config.AppFlags.Host+":"+*config.AppFlags.Port, r); err != nil {

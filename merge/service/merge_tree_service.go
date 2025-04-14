@@ -327,14 +327,21 @@ type FileDesc struct {
 	size int64
 }
 
+// get merge configurations from the overall configuration
+// Each merge configuration is [3]int64 array {timeout in seconds, max result bytes, iteration id}
+func getMergeConfigurations() [][3]int64 {
+	timeoutS := int64(config.Config.QuackPipe.MergeTimeoutS)
+	return [][3]int64{
+		{timeoutS, 100 * 1024 * 1024, 1},
+		{timeoutS * 10, 400 * 1024 * 1024, 2},
+		{timeoutS * 100, 4000 * 1024 * 1024, 3},
+	}
+}
+
 func (s *MergeTreeService) PlanMerge() ([]PlanMerge, error) {
 	var res []PlanMerge
 	// configuration - timeout_s - max_res_size_bytes - iteration_id
-	configurations := [][3]int64{
-		{10, 40 * 1024 * 1024, 1},
-		{100, 400 * 1024 * 1024, 2},
-		{1000, 4000 * 1024 * 1024, 3},
-	}
+	configurations := getMergeConfigurations()
 	for _, conf := range configurations {
 		if time.Now().Sub(s.lastIterationTime[conf[2]-1]).Seconds() > float64(conf[0]) {
 			files, err := s.merge.GetFilesToMerge(int(conf[2]))

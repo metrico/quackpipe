@@ -7,9 +7,9 @@ import (
 )
 
 type QuackPipeConfiguration struct {
-	Enabled       bool    `json:"enabled" mapstructure:"enabled" default:"false"`
+	Enabled       bool    `json:"enabled" mapstructure:"enabled" default:"true"`
 	Root          string  `json:"root" mapstructure:"root" default:""`
-	MergeTimeoutS int     `json:"merge_timeout_s" mapstructure:"merge_timeout_s" default:"60"`
+	MergeTimeoutS int     `json:"merge_timeout_s" mapstructure:"merge_timeout_s" default:"10"`
 	Secret        string  `json:"secret" mapstructure:"secret" default:""`
 	AllowSaveToHD bool    `json:"allow_save_to_hd" mapstructure:"allow_save_to_hd" default:"true"`
 	SaveTimeoutS  float64 `json:"save_timeout_s" mapstructure:"save_timeout_s" default:"1"`

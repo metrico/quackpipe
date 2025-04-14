@@ -27,6 +27,7 @@ type Index interface {
 }
 
 type Table struct {
+	Database      string
 	Name          string
 	Path          string
 	Engine        string

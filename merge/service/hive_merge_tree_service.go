@@ -8,6 +8,7 @@ import (
 	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/vm"
 	"github.com/go-faster/city"
+	"github.com/metrico/quackpipe/config"
 	"github.com/metrico/quackpipe/merge/data_types"
 	"github.com/metrico/quackpipe/model"
 	"github.com/metrico/quackpipe/utils/promise"
@@ -204,7 +205,8 @@ func (h *HiveMergeTreeService) Run() {
 		for {
 			select {
 			case <-h.flushCtx.Done():
-				h.flushCtx, h.doFlush = context.WithTimeout(context.Background(), time.Second)
+				h.flushCtx, h.doFlush = context.WithTimeout(context.Background(),
+					time.Duration(config.Config.QuackPipe.SaveTimeoutS)*time.Second)
 				h.flush()
 			}
 		}

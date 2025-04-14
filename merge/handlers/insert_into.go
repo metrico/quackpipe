@@ -34,7 +34,7 @@ func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 			}()
 			return _res.Error
 		}
-		promises = append(promises, repository.Store(_res.Table, _res.Data))
+		promises = append(promises, repository.Store("", _res.Table, _res.Data))
 	}
 	for _, p := range promises {
 		_, err = p.Get()

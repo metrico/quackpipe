@@ -20,7 +20,7 @@ import (
 
 var conn *sql.DB
 
-var registry = make(map[string]service.MergeService)
+var registry = make(map[[2]string]service.MergeService)
 var mergeTicker *time.Ticker
 var registryMtx sync.Mutex
 
@@ -31,8 +31,8 @@ func InitRegistry(_conn *sql.DB) error {
 	return nil
 }
 
-func GetTable(name string) (service.MergeService, error) {
-	table, ok := registry[name]
+func GetTable(db string, name string) (service.MergeService, error) {
+	table, ok := registry[[2]string{db, name}]
 	if !ok {
 		return nil, fmt.Errorf("table %q not found", name)
 	}
@@ -42,7 +42,7 @@ func GetTable(name string) (service.MergeService, error) {
 func RunMerge() {
 	mergeTicker = time.NewTicker(time.Second * 10)
 	for range mergeTicker.C {
-		_registry := make(map[string]service.MergeService, len(registry))
+		_registry := make(map[[2]string]service.MergeService, len(registry))
 		func() {
 			registryMtx.Lock()
 			defer registryMtx.Unlock()
@@ -64,29 +64,36 @@ func RunMerge() {
 var tableNameCheck = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 var m sync.Mutex
 
-func Store(name string, columns map[string]any) promise.Promise[int32] {
+func Store(db string, name string, columns map[string]any) promise.Promise[int32] {
+	if db == "" {
+		db = "default"
+	}
 	//TODO: add the thread id to the table name
 	//TODO: introduce Redis to synchronize several writers
 	m.Lock()
-	table := registry[name]
+	table := registry[[2]string{db, name}]
 	if table == nil {
-		err := RegisterSimpleTable(name)
+		err := RegisterSimpleTable(db, name)
 		if err != nil {
 			m.Unlock()
 			return promise.Fulfilled(err, int32(0))
 		}
-		table = registry[name]
+		table = registry[[2]string{db, name}]
 	}
 	m.Unlock()
 	return table.Store(columns)
 }
 
-func RegisterSimpleTable(name string) error {
+func RegisterSimpleTable(db, name string) error {
+	if db == "" {
+		db = "default"
+	}
 	table := &model.Table{
-		Name:    name,
-		Engine:  "HiveMerge",
-		OrderBy: []string{"__timestamp"},
-		Path:    path.Join(config.Config.QuackPipe.Root, name),
+		Database: db,
+		Name:     name,
+		Engine:   "HiveMerge",
+		OrderBy:  []string{"__timestamp"},
+		Path:     path.Join(config.Config.QuackPipe.Root, db, name),
 		PartitionBy: func(m map[string]data_types.IColumn) ([]model.PartitionDesc, error) {
 			tsCol, ok := m["__timestamp"]
 			if !ok {
@@ -155,14 +162,14 @@ func RegisterNewTable(table *model.Table) error {
 		return fmt.Errorf("invalid table name, only letters and _ are accepted: %q", table.Name)
 	}
 	if table.Path == "" {
-		table.Path = filepath.Join(config.Config.QuackPipe.Root, table.Name)
+		table.Path = filepath.Join(config.Config.QuackPipe.Root, table.Database, table.Name)
 	}
-	if _, ok := registry[table.Name]; ok {
+	if _, ok := registry[[2]string{table.Database, table.Name}]; ok {
 		return nil
 	}
 	_table := *table
 	if strings.HasPrefix(table.Path, "s3://") {
-		_table.Path = path.Join(config.Config.QuackPipe.Root, table.Name)
+		_table.Path = path.Join(config.Config.QuackPipe.Root, table.Database, table.Name)
 	}
 	err := createTableFolders(&_table)
 	if err != nil {
@@ -176,14 +183,15 @@ func RegisterNewTable(table *model.Table) error {
 	defer registryMtx.Unlock()
 	switch table.Engine {
 	case "Merge":
-		registry[table.Name], err = service.NewMergeTreeService(table)
+		registry[[2]string{table.Database, table.Name}], err = service.NewMergeTreeService(table)
 	case "HiveMerge":
-		registry[table.Name] = service.NewMultithreadHiveMergeTreeService(0, table)
+		registry[[2]string{table.Database, table.Name}] =
+			service.NewMultithreadHiveMergeTreeService(0, table)
 	}
 	if err != nil {
 		return err
 	}
-	registry[table.Name].Run()
+	registry[[2]string{table.Database, table.Name}].Run()
 	return nil
 }
 
