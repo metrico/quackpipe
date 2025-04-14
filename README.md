@@ -88,11 +88,11 @@ GigAPI is a schema-on-write database managing databases, tables and schemas on t
 GigAPI files are progressively compacted based on the following logic _(subject to changes, transparent to users)_
 
 
-| Merge Level       | Source Files | Target Level | Frequency                  | Max File Size | File Composition        |
-|-------------------|--------------|--------------|----------------------------|----------------|--------------------------|
-| Level 1 -> 2      | `.1`         | `.2`         | Every 10s (configurable)   | 100 MB         | Only `.1` files          |
-| Level 2 -> 3      | `.2`         | `.3`         | 10× less frequent than 1→2 | 400 MB         | Only `.2` files          |
-| Level 3 -> 4      | `.3`         | `.3`         | 10× less frequent than 2→3 | 4 GB           | Only `.3` files          |
+| Merge Level   | Source | Target | Frequency              | Max Size | File Composition  |
+|---------------|--------|--------|------------------------|----------|-------------------|
+| Level 1 -> 2  | `.1`   | `.2`   | GIGAPI_MERGE_TIMEOUT_S | 100 MB   | Only `.1` files   |
+| Level 2 -> 3  | `.2`   | `.3`   | 10× frequency of 1→2   | 400 MB   | Only `.2` files   |
+| Level 3 -> 4  | `.3`   | `.3`   | 10× frequency of 2→3   | 4 GB     | Only `.3` files   |
 
 GigAPI Parquet files use the following naming schema:
 ```
