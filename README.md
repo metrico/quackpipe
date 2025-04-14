@@ -84,6 +84,21 @@ GigAPI is a schema-on-write database managing databases, tables and schemas on t
           metadata.json
 ```
 
+### <img src="https://github.com/user-attachments/assets/a9aa3ebd-9164-476d-aedf-97b817078350" width=18 /> Parquet Compactor
+GigAPI files are progressively compacted based on the following logic _(subject to changes, transparent to users)_
+
+
+| Merge Level       | Source Files | Target Level | Frequency                  | Max File Size | File Composition        |
+|-------------------|--------------|--------------|----------------------------|----------------|--------------------------|
+| Level 1 -> 2      | `.1`         | `.2`         | Every 10s (configurable)   | 100 MB         | Only `.1` files          |
+| Level 2 -> 3      | `.2`         | `.3`         | 10× less frequent than 1→2 | 400 MB         | Only `.2` files          |
+| Level 3 -> 4      | `.3`         | `.3`         | 10× less frequent than 2→3 | 4 GB           | Only `.3` files          |
+
+GigAPI Parquet files use the following naming schema:
+```
+{UUID}.{LEVEL}.parquet
+```
+
 ## <img src="https://github.com/user-attachments/assets/74a1fa93-5e7e-476d-93cb-be565eca4a59" height=20 /> Read Support
 As read requests come in to GigAPI they are parsed and transpiled using the GigAPI Metadata catalog to resolve data location based on database, table and timerange in requests. Series can be used with or without time ranges, ie for calculating averages, etc.
 
