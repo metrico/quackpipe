@@ -29,7 +29,7 @@ func initFlags() *model.CommandLineFlags {
 
 func main() {
 	config.AppFlags = initFlags()
-	port := "8080"
+	port := "7971"
 	if os.Getenv("PORT") != "" {
 		port = os.Getenv("PORT")
 	}
@@ -52,7 +52,7 @@ func main() {
 	config.InitConfig(*config.AppFlags.Config)
 	merge.Init()
 	r := router.NewRouter(config.AppFlags)
-	fmt.Printf("QuackPipe API Running: %s:%s\n", *config.AppFlags.Host, *config.AppFlags.Port)
+	fmt.Printf("GigAPI Running: %s:%s\n", *config.AppFlags.Host, *config.AppFlags.Port)
 	if err := http.ListenAndServe(*config.AppFlags.Host+":"+*config.AppFlags.Port, r); err != nil {
 		panic(err)
 	}
