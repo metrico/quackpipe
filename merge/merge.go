@@ -4,7 +4,7 @@ import (
 	"github.com/gigapi/gigapi/config"
 	"github.com/gigapi/gigapi/merge/handlers"
 	"github.com/gigapi/gigapi/merge/repository"
-	"github.com/gigapi/gigapi/merge/shared"
+	"github.com/gigapi/gigapi/merge/utils"
 	"github.com/gigapi/gigapi/router"
 	"os"
 )
@@ -14,7 +14,7 @@ func Init() {
 	if err != nil {
 		panic(err)
 	}
-	conn, err := shared.ConnectDuckDB(config.Config.Gigapi.Root + "/ddb.db")
+	conn, err := utils.ConnectDuckDB(config.Config.Gigapi.Root + "/ddb.db")
 	if err != nil {
 		panic(err)
 	}
