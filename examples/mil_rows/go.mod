@@ -1,4 +1,4 @@
-module github.com/gigapi/gigapi/experiments/mil_rows
+module github.com/gigapi/gigapi/examples/mil_rows
 
 go 1.24.2
 
