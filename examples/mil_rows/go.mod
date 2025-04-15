@@ -1,6 +1,6 @@
 module github.com/gigapi/gigapi/experiments/mil_rows
 
-go 1.24
+go 1.24.2
 
 require github.com/gigapi/gigapi v1.2.3-alpha
 
