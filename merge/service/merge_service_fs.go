@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/gigapi/gigapi/merge/shared"
+	"github.com/gigapi/gigapi/merge/utils"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
@@ -205,7 +206,7 @@ func (f *fsMergeService) mergeFirstIteration(p PlanMerge) error {
 	defer firstIterationSemaphore.Release(1)
 	tmpFilePath := filepath.Join(f.tmpPath, p.To)
 	finalFilePath := filepath.Join(f.dataPath, p.To)
-	conn, err := shared.ConnectDuckDB("?allow_unsigned_extensions=1")
+	conn, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
 	if err != nil {
 		return err
 	}
@@ -260,7 +261,7 @@ func (f *fsMergeService) merge(p PlanMerge) error {
 		return os.Rename(p.From[0], finalFilePath)
 	}
 
-	conn, err := shared.ConnectDuckDB("?allow_unsigned_extensions=1")
+	conn, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
 	if err != nil {
 		return err
 	}

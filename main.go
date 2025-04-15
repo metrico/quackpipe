@@ -5,10 +5,12 @@ import (
 	"github.com/gigapi/gigapi/config"
 	"github.com/gigapi/gigapi/merge"
 	"github.com/gigapi/gigapi/router"
+	"github.com/gigapi/gigapi/stdin"
 	"net/http"
 )
 
 func initModules() {
+	stdin.Init()
 	merge.Init()
 }
 
