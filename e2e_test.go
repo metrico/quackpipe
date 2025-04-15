@@ -2,13 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge"
-	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/router"
-	"github.com/metrico/quackpipe/utils/promise"
-	"net/http"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge"
+	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/utils"
 	"os"
 	"runtime/pprof"
 	"sync"
@@ -50,21 +47,11 @@ func TestE2E(t *testing.T) {
 	defer stopCPUProfile()
 
 	config.Config = &config.Configuration{
-		QuackPipe: config.QuackPipeConfiguration{
+		Gigapi: config.GigapiConfiguration{
 			Root:          "_testdata",
 			MergeTimeoutS: 10,
 			Secret:        "XXXXXX",
 		},
-	}
-	config.AppFlags = &model.CommandLineFlags{
-		Host:   toPtr("localhost"),
-		Port:   toPtr("8123"),
-		Stdin:  toPtr(false),
-		Alias:  toPtr(true),
-		Format: toPtr(""),
-		Params: toPtr(""),
-		DBPath: toPtr("_testdata"),
-		Config: toPtr(""),
 	}
 	merge.Init()
 
@@ -73,7 +60,7 @@ func TestE2E(t *testing.T) {
 		"value":     []float64{},
 		"str":       []string{},
 	}
-	promises := make([]promise.Promise[int32], N)
+	promises := make([]utils.Promise[int32], N)
 	size := 0
 	for i := 0; i < S; i++ {
 		data["timestamp"] = append(data["timestamp"].([]int64), int64(time.Now().UnixNano()))
@@ -104,17 +91,4 @@ func TestE2E(t *testing.T) {
 	fmt.Printf("%d rows / %v MB written in %v\n", S*N, float64(size*N)/(1024*1024), time.Since(start))
 	fmt.Println("Wating for merge...")
 	time.Sleep(time.Second * 60)
-}
-
-func toPtr[X any](val X) *X {
-	return &val
-}
-
-func runServer() {
-	merge.Init()
-	r := router.NewRouter(config.AppFlags)
-	fmt.Printf("QuackPipe API Running: %s:%s\n", *config.AppFlags.Host, *config.AppFlags.Port)
-	if err := http.ListenAndServe(*config.AppFlags.Host+":"+*config.AppFlags.Port, r); err != nil {
-		panic(err)
-	}
 }

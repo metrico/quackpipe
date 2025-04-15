@@ -1,8 +1,8 @@
-module github.com/metrico/quackpipe/experiments/mil_rows
+module github.com/gigapi/gigapi/experiments/mil_rows
 
 go 1.24
 
-require github.com/metrico/quackpipe v1.2.3-alpha
+require github.com/gigapi/gigapi v1.2.3-alpha
 
 require (
 	github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c // indirect

@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"context"
-	"github.com/metrico/quackpipe/merge/parsers"
-	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/gigapi/gigapi/merge/parsers"
+	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/utils"
 	"net/http"
 )
 
@@ -25,7 +25,7 @@ func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var promises []promise.Promise[int32]
+	var promises []utils.Promise[int32]
 	for _res := range res {
 		if _res.Error != nil {
 			go func() {

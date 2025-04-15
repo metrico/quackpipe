@@ -1,8 +1,8 @@
-package model
+package shared
 
 import (
-	"github.com/metrico/quackpipe/merge/data_types"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/gigapi/gigapi/merge/data_types"
+	"github.com/gigapi/gigapi/utils"
 )
 
 type PartitionDesc struct {
@@ -20,7 +20,7 @@ type IndexEntry struct {
 }
 
 type Index interface {
-	Batch(add []*IndexEntry, rm []string) promise.Promise[int32]
+	Batch(add []*IndexEntry, rm []string) utils.Promise[int32]
 	Get(path string) *IndexEntry
 	Run()
 	Stop()

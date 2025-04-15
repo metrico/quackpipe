@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/metrico/quackpipe/service/db"
+	"github.com/gigapi/gigapi/merge/utils"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/sync/errgroup"
@@ -74,7 +74,7 @@ func (s *s3MergeService) merge(p PlanMerge) error {
 	// Create a temporary merged file
 	tmpFilePath := filepath.Join(s.tmpPath, p.To)
 
-	conn, err := db.ConnectDuckDB("?allow_unsigned_extensions=1")
+	conn, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
 	if err != nil {
 		return err
 	}

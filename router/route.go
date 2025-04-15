@@ -2,7 +2,6 @@ package router
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/metrico/quackpipe/model"
 	"net/http"
 )
 
@@ -29,7 +28,7 @@ func RegisterRoute(r *Route) {
 	handlerRegistry = append(handlerRegistry, r)
 }
 
-func NewRouter(flagInformation *model.CommandLineFlags) *mux.Router {
+func NewRouter() *mux.Router {
 	router := mux.NewRouter()
 	for _, r := range handlerRegistry {
 		router.HandleFunc(r.Path, WithErrorHandle(r.Handler)).Methods(r.Methods...)

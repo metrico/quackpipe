@@ -36,7 +36,7 @@ func CreateDuckDBTablesTable(db *sql.DB) error {
 	return nil
 }
 
-/*func InsertTableMetadata(db *sql.DB, table *model.Table) error {
+/*func InsertTableMetadata(db *sql.DB, table *shared.Table) error {
 	orderByJSON, err := json.Marshal(table.OrderBy)
 	if err != nil {
 		return err
@@ -52,16 +52,16 @@ func CreateDuckDBTablesTable(db *sql.DB) error {
 	return err
 }
 
-func GetAllTableMetadata(db *sql.DB) ([]*model.Table, error) {
+func GetAllTableMetadata(db *sql.DB) ([]*shared.Table, error) {
 	query := `SELECT name, path, order_by, engine, timestamp_field, timestamp_precision, partition_by, auto_timestamp FROM tables;`
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	tables := make([]*model.Table, 0)
+	tables := make([]*shared.Table, 0)
 	for rows.Next() {
-		var table model.Table
+		var table shared.Table
 		var orderBy []any
 		err := rows.Scan(&table.Name, &table.Path, &orderBy, &table.Engine, &table.TimestampField,
 			&table.TimestampPrecision, &table.PartitionBy, &table.AutoTimestamp)

@@ -6,8 +6,8 @@ import (
 	"github.com/apache/arrow/go/v18/arrow/memory"
 	"github.com/apache/arrow/go/v18/parquet"
 	"github.com/apache/arrow/go/v18/parquet/pqarrow"
+	"github.com/gigapi/gigapi/merge/data_types"
 	"github.com/google/uuid"
-	"github.com/metrico/quackpipe/merge/data_types"
 	"os"
 	"path"
 )

@@ -3,11 +3,11 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge/data_types"
+	"github.com/gigapi/gigapi/merge/shared"
+	"github.com/gigapi/gigapi/utils"
 	_ "github.com/marcboeker/go-duckdb/v2"
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge/data_types"
-	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/utils/promise"
 	url2 "net/url"
 	"path"
 	"path/filepath"
@@ -25,10 +25,10 @@ type IMergeTree interface {
 }
 
 type MergeTreeService struct {
-	Table              *model.Table
+	Table              *shared.Table
 	ticker             *time.Ticker
 	working            uint32
-	promises           []promise.Promise[int32]
+	promises           []utils.Promise[int32]
 	mtx                sync.Mutex
 	save               saveService
 	merge              mergeService
@@ -38,7 +38,7 @@ type MergeTreeService struct {
 	less func(store any, i int32, j int32) bool
 }
 
-func NewMergeTreeService(t *model.Table) (*MergeTreeService, error) {
+func NewMergeTreeService(t *shared.Table) (*MergeTreeService, error) {
 	res := &MergeTreeService{
 		Table:    t,
 		working:  0,
@@ -48,7 +48,7 @@ func NewMergeTreeService(t *model.Table) (*MergeTreeService, error) {
 	var err error
 	tablePath := t.Path
 	if tablePath == "" {
-		tablePath = filepath.Join(config.Config.QuackPipe.Root, t.Name)
+		tablePath = filepath.Join(config.Config.Gigapi.Root, t.Name)
 	}
 	res.save, err = res.newSaveService(path.Join(tablePath, "data"), path.Join(tablePath, "tmp"))
 	if err != nil {
@@ -81,7 +81,7 @@ func (s *MergeTreeService) newS3MergeService() (mergeService, error) {
 	}
 	return &s3MergeService{
 		fsMergeService: fsMergeService{
-			tmpPath: path.Join(config.Config.QuackPipe.Root, s.Table.Name, "tmp"),
+			tmpPath: path.Join(config.Config.Gigapi.Root, s.Table.Name, "tmp"),
 			table:   s.Table,
 		},
 		s3Config: s3Conf,
@@ -110,7 +110,7 @@ func (s *MergeTreeService) newS3SaveService(dataPath string) (saveService, error
 	res := &s3SaveService{
 		fsSaveService: fsSaveService{
 			dataPath: "",
-			tmpPath:  path.Join(config.Config.QuackPipe.Root, s.Table.Name, "tmp"),
+			tmpPath:  path.Join(config.Config.Gigapi.Root, s.Table.Name, "tmp"),
 		},
 		s3Config: s3Conf,
 	}
@@ -203,7 +203,7 @@ func (s *MergeTreeService) Run() {
 		return
 	}
 	go func() {
-		s.ticker = time.NewTicker(time.Millisecond * time.Duration(config.Config.QuackPipe.SaveTimeoutS*1000))
+		s.ticker = time.NewTicker(time.Millisecond * time.Duration(config.Config.Gigapi.SaveTimeoutS*1000))
 		for range s.ticker.C {
 			s.flush()
 		}
@@ -287,20 +287,20 @@ func (s *MergeTreeService) AutoTimestamp(columns map[string]data_types.IColumn) 
 	return columns, nil
 }
 
-func (s *MergeTreeService) Store(columns map[string]any) promise.Promise[int32] {
+func (s *MergeTreeService) Store(columns map[string]any) utils.Promise[int32] {
 	_columns, err := s.wrapColumns(columns)
 	if err != nil {
-		return promise.Fulfilled(err, int32(0))
+		return utils.Fulfilled(err, int32(0))
 	}
 
 	err = s.validateData(_columns)
 	if err != nil {
-		return promise.Fulfilled(err, int32(0))
+		return utils.Fulfilled(err, int32(0))
 	}
 
 	_columns, err = s.AutoTimestamp(_columns)
 	if err != nil {
-		return promise.Fulfilled(err, int32(0))
+		return utils.Fulfilled(err, int32(0))
 	}
 
 	s.mtx.Lock()
@@ -309,9 +309,9 @@ func (s *MergeTreeService) Store(columns map[string]any) promise.Promise[int32] 
 	var ds dataStore = s.unorderedDataStore
 	err = ds.AppendData(_columns)
 	if err != nil {
-		return promise.Fulfilled(err, int32(0))
+		return utils.Fulfilled(err, int32(0))
 	}
-	p := promise.New[int32]()
+	p := utils.New[int32]()
 	s.promises = append(s.promises, p)
 	return p
 }
@@ -330,7 +330,7 @@ type FileDesc struct {
 // get merge configurations from the overall configuration
 // Each merge configuration is [3]int64 array {timeout in seconds, max result bytes, iteration id}
 func getMergeConfigurations() [][3]int64 {
-	timeoutS := int64(config.Config.QuackPipe.MergeTimeoutS)
+	timeoutS := int64(config.Config.Gigapi.MergeTimeoutS)
 	return [][3]int64{
 		{timeoutS, 100 * 1024 * 1024, 1},
 		{timeoutS * 10, 400 * 1024 * 1024, 2},
@@ -372,7 +372,7 @@ func (s *MergeTreeService) DoMerge() error {
 type MergeService interface {
 	Run()
 	Stop()
-	Store(columns map[string]any) promise.Promise[int32]
+	Store(columns map[string]any) utils.Promise[int32]
 	DoMerge() error
 	/*PlanMerge() ([]PlanMerge, error)
 	Merge(plan []PlanMerge) error*/

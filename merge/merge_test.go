@@ -1,9 +1,9 @@
 package merge
 
 import (
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/utils"
 	"os"
 	"path"
 	"testing"
@@ -15,7 +15,7 @@ func TestMerge(t *testing.T) {
 	cwd = path.Join(cwd, "..", "_data")
 
 	config.Config = &config.Configuration{
-		QuackPipe: config.QuackPipeConfiguration{
+		Gigapi: config.GigapiConfiguration{
 			Root:          cwd,
 			MergeTimeoutS: 10,
 			SaveTimeoutS:  1,
@@ -24,7 +24,7 @@ func TestMerge(t *testing.T) {
 	}
 	Init()
 
-	var p [2]promise.Promise[int32]
+	var p [2]utils.Promise[int32]
 	for i := 0; i < 100; i++ {
 		p[0] = repository.Store("", "test", map[string]any{
 			"a": []int64{

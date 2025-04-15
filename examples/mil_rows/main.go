@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge"
-	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge"
+	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/utils"
 	"os"
 	"path"
 	"time"
@@ -31,7 +31,7 @@ func main() {
 	}
 	fmt.Println("Start writing data...")
 	t := time.Now()
-	var promises []promise.Promise[int32]
+	var promises []utils.Promise[int32]
 	for i := 0; i < 1000000; i++ {
 		data["str"] = append(data["str"].([]string), fmt.Sprintf("str%d", i))
 		data["int"] = append(data["int"].([]int64), int64(i))

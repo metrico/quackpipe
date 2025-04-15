@@ -1,20 +1,20 @@
 package merge
 
 import (
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge/handlers"
-	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/router"
-	"github.com/metrico/quackpipe/service/db"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge/handlers"
+	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/merge/utils"
+	"github.com/gigapi/gigapi/router"
 	"os"
 )
 
 func Init() {
-	err := os.MkdirAll(config.Config.QuackPipe.Root, 0750)
+	err := os.MkdirAll(config.Config.Gigapi.Root, 0750)
 	if err != nil {
 		panic(err)
 	}
-	conn, err := db.ConnectDuckDB(config.Config.QuackPipe.Root + "/ddb.db")
+	conn, err := utils.ConnectDuckDB(config.Config.Gigapi.Root + "/ddb.db")
 	if err != nil {
 		panic(err)
 	}
