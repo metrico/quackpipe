@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/metrico/quackpipe/merge/parsers"
 	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/metrico/quackpipe/utils"
 	"net/http"
 )
 
@@ -25,7 +25,7 @@ func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var promises []promise.Promise[int32]
+	var promises []utils.Promise[int32]
 	for _res := range res {
 		if _res.Error != nil {
 			go func() {

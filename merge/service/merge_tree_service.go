@@ -7,7 +7,7 @@ import (
 	"github.com/metrico/quackpipe/config"
 	"github.com/metrico/quackpipe/merge/data_types"
 	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/metrico/quackpipe/utils"
 	url2 "net/url"
 	"path"
 	"path/filepath"
@@ -28,7 +28,7 @@ type MergeTreeService struct {
 	Table              *model.Table
 	ticker             *time.Ticker
 	working            uint32
-	promises           []promise.Promise[int32]
+	promises           []utils.Promise[int32]
 	mtx                sync.Mutex
 	save               saveService
 	merge              mergeService
@@ -287,20 +287,20 @@ func (s *MergeTreeService) AutoTimestamp(columns map[string]data_types.IColumn) 
 	return columns, nil
 }
 
-func (s *MergeTreeService) Store(columns map[string]any) promise.Promise[int32] {
+func (s *MergeTreeService) Store(columns map[string]any) utils.Promise[int32] {
 	_columns, err := s.wrapColumns(columns)
 	if err != nil {
-		return promise.Fulfilled(err, int32(0))
+		return utils.Fulfilled(err, int32(0))
 	}
 
 	err = s.validateData(_columns)
 	if err != nil {
-		return promise.Fulfilled(err, int32(0))
+		return utils.Fulfilled(err, int32(0))
 	}
 
 	_columns, err = s.AutoTimestamp(_columns)
 	if err != nil {
-		return promise.Fulfilled(err, int32(0))
+		return utils.Fulfilled(err, int32(0))
 	}
 
 	s.mtx.Lock()
@@ -309,9 +309,9 @@ func (s *MergeTreeService) Store(columns map[string]any) promise.Promise[int32] 
 	var ds dataStore = s.unorderedDataStore
 	err = ds.AppendData(_columns)
 	if err != nil {
-		return promise.Fulfilled(err, int32(0))
+		return utils.Fulfilled(err, int32(0))
 	}
-	p := promise.New[int32]()
+	p := utils.New[int32]()
 	s.promises = append(s.promises, p)
 	return p
 }
@@ -372,7 +372,7 @@ func (s *MergeTreeService) DoMerge() error {
 type MergeService interface {
 	Run()
 	Stop()
-	Store(columns map[string]any) promise.Promise[int32]
+	Store(columns map[string]any) utils.Promise[int32]
 	DoMerge() error
 	/*PlanMerge() ([]PlanMerge, error)
 	Merge(plan []PlanMerge) error*/

@@ -11,7 +11,7 @@ import (
 	"github.com/metrico/quackpipe/config"
 	"github.com/metrico/quackpipe/merge/data_types"
 	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/metrico/quackpipe/utils"
 	"golang.org/x/sync/errgroup"
 	"math"
 	"path"
@@ -280,29 +280,29 @@ func (h *HiveMergeTreeService) getDataPath(values [][2]string) string {
 	return path.Join(p...)
 }
 
-func (h *HiveMergeTreeService) Store(columns map[string]any) promise.Promise[int32] {
+func (h *HiveMergeTreeService) Store(columns map[string]any) utils.Promise[int32] {
 	_columns, err := h.wrapColumns(columns)
 	if err != nil {
-		return promise.Fulfilled[int32](err, 0)
+		return utils.Fulfilled[int32](err, 0)
 	}
 
 	err = h.validateData(_columns)
 	if err != nil {
-		return promise.Fulfilled[int32](err, 0)
+		return utils.Fulfilled[int32](err, 0)
 	}
 
 	_columns, err = h.AutoTimestamp(_columns)
 	if err != nil {
-		return promise.Fulfilled[int32](err, 0)
+		return utils.Fulfilled[int32](err, 0)
 	}
 
 	//TODO: copy data to partitions right away
 	partsDesc, err := h.Table.PartitionBy(_columns)
 	if err != nil {
-		return promise.Fulfilled[int32](err, 0)
+		return utils.Fulfilled[int32](err, 0)
 	}
 
-	var promises []promise.Promise[int32]
+	var promises []utils.Promise[int32]
 	h.mtx.Lock()
 	for _, part := range partsDesc {
 		id := h.calculatePartitionHash(part.Values)
@@ -313,7 +313,7 @@ func (h *HiveMergeTreeService) Store(columns map[string]any) promise.Promise[int
 				h.Table)
 			if err != nil {
 				h.mtx.Unlock()
-				return promise.Fulfilled[int32](err, 0)
+				return utils.Fulfilled[int32](err, 0)
 			}
 		}
 	}
@@ -333,7 +333,7 @@ func (h *HiveMergeTreeService) Store(columns map[string]any) promise.Promise[int
 	}
 	h.mtx.Unlock()
 
-	return promise.NewWaitForAll(promises)
+	return utils.NewWaitForAll(promises)
 }
 
 func (h *HiveMergeTreeService) PlanMerge() (map[uint64][]PlanMerge, error) {
@@ -380,7 +380,7 @@ func (h *HiveMergeTreeService) DoMerge() error {
 
 type mtHiveStoreReq struct {
 	data map[string]any
-	res  chan promise.Promise[int32]
+	res  chan utils.Promise[int32]
 }
 
 type MultithreadHiveMergeTreeService struct {
@@ -421,10 +421,10 @@ func (m *MultithreadHiveMergeTreeService) Stop() {
 	close(m.channel)
 }
 
-func (m *MultithreadHiveMergeTreeService) Store(columns map[string]any) promise.Promise[int32] {
+func (m *MultithreadHiveMergeTreeService) Store(columns map[string]any) utils.Promise[int32] {
 	req := &mtHiveStoreReq{
 		data: columns,
-		res:  make(chan promise.Promise[int32]),
+		res:  make(chan utils.Promise[int32]),
 	}
 	defer close(req.res)
 	m.channel <- req

@@ -7,7 +7,6 @@ import (
 	"github.com/metrico/quackpipe/merge"
 	"github.com/metrico/quackpipe/model"
 	"github.com/metrico/quackpipe/router"
-	"github.com/metrico/quackpipe/utils"
 	"net/http"
 	"os"
 )
@@ -33,23 +32,7 @@ func main() {
 	if os.Getenv("PORT") != "" {
 		port = os.Getenv("PORT")
 	}
-	config.AppFlags.Port = &port
-	if *config.AppFlags.Stdin {
-		rows, duration, format, err := utils.ReadFromScanner(*config.AppFlags)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		results, err := utils.ConversationOfRows(rows, format, duration)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		} else {
-			fmt.Println(results)
-		}
-		return
-	}
-	config.InitConfig(*config.AppFlags.Config)
+	config.InitConfig("")
 	merge.Init()
 	r := router.NewRouter(config.AppFlags)
 	fmt.Printf("GigAPI Running: %s:%s\n", *config.AppFlags.Host, *config.AppFlags.Port)

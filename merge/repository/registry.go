@@ -8,7 +8,7 @@ import (
 	"github.com/metrico/quackpipe/merge/index"
 	"github.com/metrico/quackpipe/merge/service"
 	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/metrico/quackpipe/utils"
 	"os"
 	"path"
 	"path/filepath"
@@ -64,7 +64,7 @@ func RunMerge() {
 var tableNameCheck = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 var m sync.Mutex
 
-func Store(db string, name string, columns map[string]any) promise.Promise[int32] {
+func Store(db string, name string, columns map[string]any) utils.Promise[int32] {
 	if db == "" {
 		db = "default"
 	}
@@ -76,7 +76,7 @@ func Store(db string, name string, columns map[string]any) promise.Promise[int32
 		err := RegisterSimpleTable(db, name)
 		if err != nil {
 			m.Unlock()
-			return promise.Fulfilled(err, int32(0))
+			return utils.Fulfilled(err, int32(0))
 		}
 		table = registry[[2]string{db, name}]
 	}

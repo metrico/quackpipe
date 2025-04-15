@@ -6,7 +6,7 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/metrico/quackpipe/utils"
 	"os"
 	"path"
 	"sync"
@@ -31,7 +31,7 @@ type JSONIndex struct {
 	idxPath string
 
 	entries   map[string]*jsonIndexEntry
-	promises  []promise.Promise[int32]
+	promises  []utils.Promise[int32]
 	m         sync.Mutex
 	updateCtx context.Context
 	doUpdate  context.CancelFunc
@@ -134,19 +134,19 @@ func (J *JSONIndex) populateFiles(iter *jsoniter.Iterator) error {
 	return nil
 }
 
-func (J *JSONIndex) Batch(add []*model.IndexEntry, rm []string) promise.Promise[int32] {
+func (J *JSONIndex) Batch(add []*model.IndexEntry, rm []string) utils.Promise[int32] {
 	_add, err := J.entry2JEntry(add)
 	if err != nil {
-		return promise.Fulfilled[int32](err, 0)
+		return utils.Fulfilled[int32](err, 0)
 	}
 	J.m.Lock()
 	defer J.m.Unlock()
 	J.add(_add)
 	removed := J.rm(rm)
 	if len(_add) == 0 && !removed {
-		return promise.Fulfilled(nil, int32(0))
+		return utils.Fulfilled(nil, int32(0))
 	}
-	p := promise.New[int32]()
+	p := utils.New[int32]()
 	J.promises = append(J.promises, p)
 	J.doUpdate()
 	return p

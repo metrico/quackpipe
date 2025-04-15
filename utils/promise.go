@@ -1,4 +1,4 @@
-package promise
+package utils
 
 import (
 	"sync"

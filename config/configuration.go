@@ -18,6 +18,7 @@ type QuackPipeConfiguration struct {
 
 type Configuration struct {
 	QuackPipe QuackPipeConfiguration `json:"gigapi" mapstructure:"gigapi" default:""`
+	Port      int                    `json:"port" mapstructure:"port" default:"8080"`
 }
 
 var Config *Configuration

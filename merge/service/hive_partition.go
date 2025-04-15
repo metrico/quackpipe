@@ -3,7 +3,7 @@ package service
 import (
 	"github.com/metrico/quackpipe/merge/data_types"
 	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/metrico/quackpipe/utils"
 	"os"
 	"path/filepath"
 	"sync"
@@ -16,7 +16,7 @@ type Partition struct {
 	unordered         *unorderedDataStore
 	saveService       saveService
 	mergeService      mergeService
-	promises          []promise.Promise[int32]
+	promises          []utils.Promise[int32]
 	m                 sync.Mutex
 	table             *model.Table
 	lastStore         time.Time
@@ -72,28 +72,28 @@ func (p *Partition) GetSchema() map[string]string {
 	return nil
 }
 
-func (p *Partition) StoreByMask(data map[string]data_types.IColumn, mask []byte) promise.Promise[int32] {
+func (p *Partition) StoreByMask(data map[string]data_types.IColumn, mask []byte) utils.Promise[int32] {
 	p.m.Lock()
 	defer p.m.Unlock()
 	err := p.unordered.AppendByMask(data, mask)
 	if err != nil {
-		return promise.Fulfilled(err, int32(0))
+		return utils.Fulfilled(err, int32(0))
 	}
-	res := promise.New[int32]()
+	res := utils.New[int32]()
 	p.promises = append(p.promises, res)
 	p.lastStore = time.Now()
 	return res
 }
 
-func (p *Partition) Store(data map[string]data_types.IColumn) promise.Promise[int32] {
+func (p *Partition) Store(data map[string]data_types.IColumn) utils.Promise[int32] {
 	p.m.Lock()
 	defer p.m.Unlock()
 	var err error
 	err = p.unordered.AppendData(data)
 	if err != nil {
-		return promise.Fulfilled(err, int32(0))
+		return utils.Fulfilled(err, int32(0))
 	}
-	res := promise.New[int32]()
+	res := utils.New[int32]()
 	p.promises = append(p.promises, res)
 	p.lastStore = time.Now()
 	return res

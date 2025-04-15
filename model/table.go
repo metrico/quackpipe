@@ -2,7 +2,7 @@ package model
 
 import (
 	"github.com/metrico/quackpipe/merge/data_types"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/metrico/quackpipe/utils"
 )
 
 type PartitionDesc struct {
@@ -20,7 +20,7 @@ type IndexEntry struct {
 }
 
 type Index interface {
-	Batch(add []*IndexEntry, rm []string) promise.Promise[int32]
+	Batch(add []*IndexEntry, rm []string) utils.Promise[int32]
 	Get(path string) *IndexEntry
 	Run()
 	Stop()

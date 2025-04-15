@@ -3,7 +3,7 @@ package merge
 import (
 	"github.com/metrico/quackpipe/config"
 	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/metrico/quackpipe/utils"
 	"os"
 	"path"
 	"testing"
@@ -24,7 +24,7 @@ func TestMerge(t *testing.T) {
 	}
 	Init()
 
-	var p [2]promise.Promise[int32]
+	var p [2]utils.Promise[int32]
 	for i := 0; i < 100; i++ {
 		p[0] = repository.Store("", "test", map[string]any{
 			"a": []int64{

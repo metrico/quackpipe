@@ -7,7 +7,8 @@ import (
 	"github.com/metrico/quackpipe/merge/repository"
 	"github.com/metrico/quackpipe/model"
 	"github.com/metrico/quackpipe/router"
-	"github.com/metrico/quackpipe/utils/promise"
+	"github.com/metrico/quackpipe/utils"
+	"golang.org/x/exp/rand"
 	"net/http"
 	"os"
 	"runtime/pprof"
@@ -73,7 +74,7 @@ func TestE2E(t *testing.T) {
 		"value":     []float64{},
 		"str":       []string{},
 	}
-	promises := make([]promise.Promise[int32], N)
+	promises := make([]utils.Promise[int32], N)
 	size := 0
 	for i := 0; i < S; i++ {
 		data["timestamp"] = append(data["timestamp"].([]int64), int64(time.Now().UnixNano()))
@@ -117,4 +118,26 @@ func runServer() {
 	if err := http.ListenAndServe(*config.AppFlags.Host+":"+*config.AppFlags.Port, r); err != nil {
 		panic(err)
 	}
+}
+
+func TestChannel1(t *testing.T) {
+	wg := sync.WaitGroup{}
+	c := make(chan float64)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 1000000; i++ {
+			c <- rand.Float64()
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for f := range c {
+			if f < 0.1 {
+				fmt.Println("ERROR: Too small f")
+				return
+			}
+		}
+	}()
+	wg.Wait()
 }
