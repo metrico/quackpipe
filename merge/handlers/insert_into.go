@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"context"
-	"github.com/metrico/quackpipe/merge/parsers"
-	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/utils"
+	"github.com/gigapi/gigapi/merge/parsers"
+	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/utils"
 	"net/http"
 )
 

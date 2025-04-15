@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gigapi/gigapi/merge/shared"
+	"github.com/gigapi/gigapi/utils"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/utils"
 	"os"
 	"path"
 	"sync"
@@ -27,7 +27,7 @@ type jsonIndexEntry struct {
 }
 
 type JSONIndex struct {
-	t       *model.Table
+	t       *shared.Table
 	idxPath string
 
 	entries   map[string]*jsonIndexEntry
@@ -45,7 +45,7 @@ type JSONIndex struct {
 	maxTime          int64
 }
 
-func NewJSONIndex(t *model.Table) (model.Index, error) {
+func NewJSONIndex(t *shared.Table) (shared.Index, error) {
 	res := &JSONIndex{
 		t:       t,
 		idxPath: t.Path,
@@ -57,7 +57,7 @@ func NewJSONIndex(t *model.Table) (model.Index, error) {
 	return res, err
 }
 
-func NewJSONIndexForPartition(t *model.Table, values [][2]string) (model.Index, error) {
+func NewJSONIndexForPartition(t *shared.Table, values [][2]string) (shared.Index, error) {
 	folders := make([]string, len(values)+1)
 	folders[0] = t.Path
 	for i, value := range values {
@@ -134,7 +134,7 @@ func (J *JSONIndex) populateFiles(iter *jsoniter.Iterator) error {
 	return nil
 }
 
-func (J *JSONIndex) Batch(add []*model.IndexEntry, rm []string) utils.Promise[int32] {
+func (J *JSONIndex) Batch(add []*shared.IndexEntry, rm []string) utils.Promise[int32] {
 	_add, err := J.entry2JEntry(add)
 	if err != nil {
 		return utils.Fulfilled[int32](err, 0)
@@ -152,7 +152,7 @@ func (J *JSONIndex) Batch(add []*model.IndexEntry, rm []string) utils.Promise[in
 	return p
 }
 
-func (J *JSONIndex) entry2JEntry(entries []*model.IndexEntry) ([]*jsonIndexEntry, error) {
+func (J *JSONIndex) entry2JEntry(entries []*shared.IndexEntry) ([]*jsonIndexEntry, error) {
 	res := make([]*jsonIndexEntry, len(entries))
 	for i, entry := range entries {
 		id := atomic.AddUint32(&J.lastId, 1)
@@ -369,13 +369,13 @@ func (J *JSONIndex) Stop() {
 	J.stop()
 }
 
-func (J *JSONIndex) Get(path string) *model.IndexEntry {
+func (J *JSONIndex) Get(path string) *shared.IndexEntry {
 	_e := J.entries[path]
 	if _e == nil {
 		return nil
 	}
 
-	return &model.IndexEntry{
+	return &shared.IndexEntry{
 		Path:      _e.Path,
 		SizeBytes: _e.SizeBytes,
 		RowCount:  _e.RowCount,

@@ -2,14 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge"
-	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/router"
-	"github.com/metrico/quackpipe/utils"
-	"golang.org/x/exp/rand"
-	"net/http"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge"
+	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/utils"
 	"os"
 	"runtime/pprof"
 	"sync"
@@ -51,21 +47,11 @@ func TestE2E(t *testing.T) {
 	defer stopCPUProfile()
 
 	config.Config = &config.Configuration{
-		QuackPipe: config.QuackPipeConfiguration{
+		Gigapi: config.GigapiConfiguration{
 			Root:          "_testdata",
 			MergeTimeoutS: 10,
 			Secret:        "XXXXXX",
 		},
-	}
-	config.AppFlags = &model.CommandLineFlags{
-		Host:   toPtr("localhost"),
-		Port:   toPtr("8123"),
-		Stdin:  toPtr(false),
-		Alias:  toPtr(true),
-		Format: toPtr(""),
-		Params: toPtr(""),
-		DBPath: toPtr("_testdata"),
-		Config: toPtr(""),
 	}
 	merge.Init()
 
@@ -105,39 +91,4 @@ func TestE2E(t *testing.T) {
 	fmt.Printf("%d rows / %v MB written in %v\n", S*N, float64(size*N)/(1024*1024), time.Since(start))
 	fmt.Println("Wating for merge...")
 	time.Sleep(time.Second * 60)
-}
-
-func toPtr[X any](val X) *X {
-	return &val
-}
-
-func runServer() {
-	merge.Init()
-	r := router.NewRouter(config.AppFlags)
-	fmt.Printf("QuackPipe API Running: %s:%s\n", *config.AppFlags.Host, *config.AppFlags.Port)
-	if err := http.ListenAndServe(*config.AppFlags.Host+":"+*config.AppFlags.Port, r); err != nil {
-		panic(err)
-	}
-}
-
-func TestChannel1(t *testing.T) {
-	wg := sync.WaitGroup{}
-	c := make(chan float64)
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		for i := 0; i < 1000000; i++ {
-			c <- rand.Float64()
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		for f := range c {
-			if f < 0.1 {
-				fmt.Println("ERROR: Too small f")
-				return
-			}
-		}
-	}()
-	wg.Wait()
 }

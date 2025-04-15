@@ -3,12 +3,12 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge/data_types"
-	"github.com/metrico/quackpipe/merge/index"
-	"github.com/metrico/quackpipe/merge/service"
-	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/utils"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge/data_types"
+	"github.com/gigapi/gigapi/merge/index"
+	"github.com/gigapi/gigapi/merge/service"
+	"github.com/gigapi/gigapi/merge/shared"
+	"github.com/gigapi/gigapi/utils"
 	"os"
 	"path"
 	"path/filepath"
@@ -25,7 +25,7 @@ var mergeTicker *time.Ticker
 var registryMtx sync.Mutex
 
 func InitRegistry(_conn *sql.DB) error {
-	if !config.Config.QuackPipe.NoMerges {
+	if !config.Config.Gigapi.NoMerges {
 		go RunMerge()
 	}
 	return nil
@@ -88,13 +88,13 @@ func RegisterSimpleTable(db, name string) error {
 	if db == "" {
 		db = "default"
 	}
-	table := &model.Table{
+	table := &shared.Table{
 		Database: db,
 		Name:     name,
 		Engine:   "HiveMerge",
 		OrderBy:  []string{"__timestamp"},
-		Path:     path.Join(config.Config.QuackPipe.Root, db, name),
-		PartitionBy: func(m map[string]data_types.IColumn) ([]model.PartitionDesc, error) {
+		Path:     path.Join(config.Config.Gigapi.Root, db, name),
+		PartitionBy: func(m map[string]data_types.IColumn) ([]shared.PartitionDesc, error) {
 			tsCol, ok := m["__timestamp"]
 			if !ok {
 				return nil, fmt.Errorf("table %q does not have a '__timestamp' column", name)
@@ -104,15 +104,15 @@ func RegisterSimpleTable(db, name string) error {
 				return nil, fmt.Errorf("column '__timestamp' has non-int64 data type")
 			}
 
-			parts := make(map[int64]*model.PartitionDesc)
+			parts := make(map[int64]*shared.PartitionDesc)
 			lastPartId := int64(0)
-			var lastPart *model.PartitionDesc
+			var lastPart *shared.PartitionDesc
 			for i, ts := range tsData {
 				id := int64(ts / 86400000000000)
 				if lastPart == nil || lastPartId != id {
 					lastPartId = id
 					if _, ok := parts[id]; !ok {
-						parts[id] = &model.PartitionDesc{
+						parts[id] = &shared.PartitionDesc{
 							Values: [][2]string{
 								{"date", time.Unix(0, ts).UTC().Format("2006-01-02")},
 								{"hour", time.Unix(0, ts).UTC().Format("15")},
@@ -124,7 +124,7 @@ func RegisterSimpleTable(db, name string) error {
 				}
 				lastPart.IndexMap[i/8] |= 1 << (uint(i) % 8)
 			}
-			res := make([]model.PartitionDesc, 0, len(parts))
+			res := make([]shared.PartitionDesc, 0, len(parts))
 			for _, desc := range parts {
 				res = append(res, *desc)
 			}
@@ -134,8 +134,8 @@ func RegisterSimpleTable(db, name string) error {
 		AutoTimestamp: true,
 	}
 	m := sync.Mutex{}
-	parts := make(map[string]model.Index)
-	table.IndexCreator = func(values [][2]string) (model.Index, error) {
+	parts := make(map[string]shared.Index)
+	table.IndexCreator = func(values [][2]string) (shared.Index, error) {
 		m.Lock()
 		defer m.Unlock()
 		idxName := make([]string, len(values))
@@ -157,19 +157,19 @@ func RegisterSimpleTable(db, name string) error {
 	return RegisterNewTable(table)
 }
 
-func RegisterNewTable(table *model.Table) error {
+func RegisterNewTable(table *shared.Table) error {
 	if !tableNameCheck.MatchString(table.Name) {
 		return fmt.Errorf("invalid table name, only letters and _ are accepted: %q", table.Name)
 	}
 	if table.Path == "" {
-		table.Path = filepath.Join(config.Config.QuackPipe.Root, table.Database, table.Name)
+		table.Path = filepath.Join(config.Config.Gigapi.Root, table.Database, table.Name)
 	}
 	if _, ok := registry[[2]string{table.Database, table.Name}]; ok {
 		return nil
 	}
 	_table := *table
 	if strings.HasPrefix(table.Path, "s3://") {
-		_table.Path = path.Join(config.Config.QuackPipe.Root, table.Database, table.Name)
+		_table.Path = path.Join(config.Config.Gigapi.Root, table.Database, table.Name)
 	}
 	err := createTableFolders(&_table)
 	if err != nil {
@@ -214,7 +214,7 @@ func PopulateRegistry() error {
 
 }
 
-func createTableFolders(table *model.Table) error {
+func createTableFolders(table *shared.Table) error {
 	if !tableNameCheck.MatchString(table.Name) {
 		return fmt.Errorf("invalid table name, only letters and _ are accepted: %q", table.Name)
 	}

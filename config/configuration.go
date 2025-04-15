@@ -3,10 +3,12 @@ package config
 import (
 	"fmt"
 	"github.com/spf13/viper"
+	"reflect"
+	"strconv"
 	"strings"
 )
 
-type QuackPipeConfiguration struct {
+type GigapiConfiguration struct {
 	Enabled       bool    `json:"enabled" mapstructure:"enabled" default:"true"`
 	Root          string  `json:"root" mapstructure:"root" default:""`
 	MergeTimeoutS int     `json:"merge_timeout_s" mapstructure:"merge_timeout_s" default:"10"`
@@ -17,8 +19,9 @@ type QuackPipeConfiguration struct {
 }
 
 type Configuration struct {
-	QuackPipe QuackPipeConfiguration `json:"gigapi" mapstructure:"gigapi" default:""`
-	Port      int                    `json:"port" mapstructure:"port" default:"8080"`
+	Gigapi GigapiConfiguration `json:"gigapi" mapstructure:"gigapi" default:""`
+	Port   int                 `json:"port" mapstructure:"port" default:"7971"`
+	Host   string              `json:"host" mapstructure:"host" default:"0.0.0.0"`
 }
 
 var Config *Configuration
@@ -44,8 +47,48 @@ func InitConfig(file string) {
 	if err != nil {
 		panic(fmt.Errorf("unable to decode into struct: %s", err))
 	}
-	if Config.QuackPipe.SaveTimeoutS == 0 {
-		Config.QuackPipe.SaveTimeoutS = 1
+	if Config.Gigapi.SaveTimeoutS == 0 {
+		Config.Gigapi.SaveTimeoutS = 1
 	}
+	setDefaults(Config)
 	fmt.Printf("Loaded configuration: %+v\n", Config)
+}
+
+func setDefaults(config any) {
+	configValue := reflect.ValueOf(config).Elem()
+	configType := configValue.Type()
+
+	for i := 0; i < configValue.NumField(); i++ {
+		field := configValue.Field(i)
+		fieldType := configType.Field(i)
+
+		if field.Kind() == reflect.Struct {
+			setDefaults(field.Addr().Interface())
+			continue
+		}
+
+		defaultTag := fieldType.Tag.Get("default")
+		if defaultTag == "" {
+			continue
+		}
+
+		if field.IsZero() {
+			switch field.Kind() {
+			case reflect.String:
+				field.SetString(defaultTag)
+			case reflect.Int:
+				if intValue, err := strconv.Atoi(defaultTag); err == nil {
+					field.SetInt(int64(intValue))
+				}
+			case reflect.Float64:
+				if floatValue, err := strconv.ParseFloat(defaultTag, 64); err == nil {
+					field.SetFloat(floatValue)
+				}
+			case reflect.Bool:
+				if boolValue, err := strconv.ParseBool(defaultTag); err == nil {
+					field.SetBool(boolValue)
+				}
+			}
+		}
+	}
 }

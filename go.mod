@@ -1,4 +1,4 @@
-module github.com/metrico/quackpipe
+module github.com/gigapi/gigapi
 
 go 1.24
 

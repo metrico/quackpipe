@@ -5,9 +5,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/gigapi/gigapi/merge/shared"
 	"github.com/google/uuid"
-	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/service/db"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 	"html/template"
@@ -35,8 +34,8 @@ type mergeService interface {
 type fsMergeService struct {
 	dataPath string
 	tmpPath  string
-	table    *model.Table
-	index    model.Index
+	table    *shared.Table
+	index    shared.Index
 }
 
 func (f *fsMergeService) GetFilesToMerge(iteration int) ([]FileDesc, error) {
@@ -206,7 +205,7 @@ func (f *fsMergeService) mergeFirstIteration(p PlanMerge) error {
 	defer firstIterationSemaphore.Release(1)
 	tmpFilePath := filepath.Join(f.tmpPath, p.To)
 	finalFilePath := filepath.Join(f.dataPath, p.To)
-	conn, err := db.ConnectDuckDB("?allow_unsigned_extensions=1")
+	conn, err := shared.ConnectDuckDB("?allow_unsigned_extensions=1")
 	if err != nil {
 		return err
 	}
@@ -261,7 +260,7 @@ func (f *fsMergeService) merge(p PlanMerge) error {
 		return os.Rename(p.From[0], finalFilePath)
 	}
 
-	conn, err := db.ConnectDuckDB("?allow_unsigned_extensions=1")
+	conn, err := shared.ConnectDuckDB("?allow_unsigned_extensions=1")
 	if err != nil {
 		return err
 	}
@@ -334,7 +333,7 @@ func (f *fsMergeService) updateIndex(merge PlanMerge) error {
 	if err != nil {
 		return err
 	}
-	newIdx := &model.IndexEntry{
+	newIdx := &shared.IndexEntry{
 		Path:      path,
 		SizeBytes: stat.Size(),
 		RowCount:  rowCount,
@@ -342,7 +341,7 @@ func (f *fsMergeService) updateIndex(merge PlanMerge) error {
 		Min:       _min,
 		Max:       _max,
 	}
-	prom := f.index.Batch([]*model.IndexEntry{newIdx}, toDelete)
+	prom := f.index.Batch([]*shared.IndexEntry{newIdx}, toDelete)
 	_, err = prom.Get()
 	return err
 }

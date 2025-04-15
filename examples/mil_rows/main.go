@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge"
-	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/utils"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge"
+	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/utils"
 	"os"
 	"path"
 	"time"

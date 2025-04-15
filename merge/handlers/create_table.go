@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/model"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/merge/shared"
+
 	"gopkg.in/yaml.v3"
 	"io"
 	"net/http"
@@ -53,7 +54,7 @@ func CreateTableHandler(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("field %s does not exist", req.Timestamp.Field)
 	}
 
-	if !config.Config.QuackPipe.AllowSaveToHD {
+	if !config.Config.Gigapi.AllowSaveToHD {
 		if req.S3Url == "" {
 			return fmt.Errorf("s3_url is required")
 		}
@@ -63,7 +64,7 @@ func CreateTableHandler(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("s3_url must start with s3://")
 	}
 
-	table := model.Table{
+	table := shared.Table{
 		Name:        req.CreateTable,
 		Engine:      req.Engine,
 		OrderBy:     req.OrderBy,

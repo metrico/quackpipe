@@ -7,11 +7,11 @@ import (
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/vm"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge/data_types"
+	"github.com/gigapi/gigapi/merge/shared"
+	"github.com/gigapi/gigapi/utils"
 	"github.com/go-faster/city"
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge/data_types"
-	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/utils"
 	"golang.org/x/sync/errgroup"
 	"math"
 	"path"
@@ -141,7 +141,7 @@ type HiveMergeTreeService struct {
 	doFlush  context.CancelFunc
 }
 
-func NewHiveMergeTreeService(t *model.Table) (*HiveMergeTreeService, error) {
+func NewHiveMergeTreeService(t *shared.Table) (*HiveMergeTreeService, error) {
 	res := &HiveMergeTreeService{
 		MergeTreeService: &MergeTreeService{
 			Table: t,
@@ -206,7 +206,7 @@ func (h *HiveMergeTreeService) Run() {
 			select {
 			case <-h.flushCtx.Done():
 				h.flushCtx, h.doFlush = context.WithTimeout(context.Background(),
-					time.Duration(config.Config.QuackPipe.SaveTimeoutS)*time.Second)
+					time.Duration(config.Config.Gigapi.SaveTimeoutS)*time.Second)
 				h.flush()
 			}
 		}
@@ -388,7 +388,7 @@ type MultithreadHiveMergeTreeService struct {
 	channel chan *mtHiveStoreReq
 }
 
-func NewMultithreadHiveMergeTreeService(numThreads int, t *model.Table) *MultithreadHiveMergeTreeService {
+func NewMultithreadHiveMergeTreeService(numThreads int, t *shared.Table) *MultithreadHiveMergeTreeService {
 	if numThreads <= 0 {
 		numThreads = runtime.NumCPU()
 	}

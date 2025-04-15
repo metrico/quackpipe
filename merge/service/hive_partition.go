@@ -1,9 +1,9 @@
 package service
 
 import (
-	"github.com/metrico/quackpipe/merge/data_types"
-	"github.com/metrico/quackpipe/model"
-	"github.com/metrico/quackpipe/utils"
+	"github.com/gigapi/gigapi/merge/data_types"
+	"github.com/gigapi/gigapi/merge/shared"
+	"github.com/gigapi/gigapi/utils"
 	"os"
 	"path/filepath"
 	"sync"
@@ -12,20 +12,20 @@ import (
 
 type Partition struct {
 	Values            [][2]string
-	index             model.Index
+	index             shared.Index
 	unordered         *unorderedDataStore
 	saveService       saveService
 	mergeService      mergeService
 	promises          []utils.Promise[int32]
 	m                 sync.Mutex
-	table             *model.Table
+	table             *shared.Table
 	lastStore         time.Time
 	lastSave          time.Time
 	lastIterationTime [3]time.Time
 	dataPath          string
 }
 
-func NewPartition(values [][2]string, tmpPath, dataPath string, t *model.Table) (*Partition, error) {
+func NewPartition(values [][2]string, tmpPath, dataPath string, t *shared.Table) (*Partition, error) {
 	res := &Partition{
 		Values:            values,
 		unordered:         newUnorderedDataStore(),
@@ -44,7 +44,7 @@ func NewPartition(values [][2]string, tmpPath, dataPath string, t *model.Table) 
 	return res, err
 }
 
-func (p *Partition) initServices(tmpPath, dataPath string, t *model.Table) error {
+func (p *Partition) initServices(tmpPath, dataPath string, t *shared.Table) error {
 	err := os.MkdirAll(tmpPath, 0755)
 	if err != nil {
 		return err
@@ -149,7 +149,7 @@ func (p *Partition) Save() {
 
 		size := unordered.GetSize()
 
-		prom := p.index.Batch([]*model.IndexEntry{{
+		prom := p.index.Batch([]*shared.IndexEntry{{
 			Path:      absDataPath,
 			SizeBytes: stat.Size(),
 			RowCount:  size,

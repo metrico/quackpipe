@@ -1,9 +1,9 @@
 package merge
 
 import (
-	"github.com/metrico/quackpipe/config"
-	"github.com/metrico/quackpipe/merge/repository"
-	"github.com/metrico/quackpipe/utils"
+	"github.com/gigapi/gigapi/config"
+	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/utils"
 	"os"
 	"path"
 	"testing"
@@ -15,7 +15,7 @@ func TestMerge(t *testing.T) {
 	cwd = path.Join(cwd, "..", "_data")
 
 	config.Config = &config.Configuration{
-		QuackPipe: config.QuackPipeConfiguration{
+		Gigapi: config.GigapiConfiguration{
 			Root:          cwd,
 			MergeTimeoutS: 10,
 			SaveTimeoutS:  1,

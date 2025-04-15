@@ -1,8 +1,8 @@
-package model
+package shared
 
 import (
-	"github.com/metrico/quackpipe/merge/data_types"
-	"github.com/metrico/quackpipe/utils"
+	"github.com/gigapi/gigapi/merge/data_types"
+	"github.com/gigapi/gigapi/utils"
 )
 
 type PartitionDesc struct {

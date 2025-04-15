@@ -86,8 +86,8 @@ github.com/marcboeker/go-duckdb/mapping v0.0.3 h1:xXgDhmXKmQhY0rf2e1GUwXt2PAJJVe
 github.com/marcboeker/go-duckdb/mapping v0.0.3/go.mod h1:99cn5SsYaVaow4vxvUAzj04F3ilDnVerUpB8nA+91fY=
 github.com/marcboeker/go-duckdb/v2 v2.0.1 h1:t/MQQqubdQheqp55Bl0/tH8P7PfLym9cFmLyb/hDD44=
 github.com/marcboeker/go-duckdb/v2 v2.0.1/go.mod h1:kQObJkVeuGy6V+O9HABg/arnzl6gz7DBhq3h5ywsdeI=
-github.com/metrico/quackpipe v1.2.3-alpha h1:nFo/k6PEab5i3pBmu7ZvKDtF6aoohl6xfwdpeSILqCg=
-github.com/metrico/quackpipe v1.2.3-alpha/go.mod h1:MzXo5XLkg/I61BxRFlxp7gz5FqM34PTnl5J2/U+llKI=
+github.com/gigapi/gigapi v1.2.3-alpha h1:nFo/k6PEab5i3pBmu7ZvKDtF6aoohl6xfwdpeSILqCg=
+github.com/gigapi/gigapi v1.2.3-alpha/go.mod h1:MzXo5XLkg/I61BxRFlxp7gz5FqM34PTnl5J2/U+llKI=
 github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8 h1:AMFGa4R4MiIpspGNG7Z948v4n35fFGB3RR3G/ry4FWs=
 github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8/go.mod h1:mC1jAcsrzbxHt8iiaC+zU4b1ylILSosueou12R++wfY=
 github.com/minio/c2goasm v0.0.0-20190812172519-36a3d3bbc4f3 h1:+n/aFZefKZp7spd8DFdX7uMikMLXX4oubIzJF4kv/wI=
