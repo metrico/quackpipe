@@ -12,6 +12,11 @@ func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 	contentType := r.Header.Get("Content-Type")
 	parser, err := parsers.GetParser(contentType, nil, nil)
 
+	database := r.URL.Query().Get("db")
+	if database == "" {
+		database = "default"
+	}
+
 	ctx := r.Context()
 	precision := r.URL.Query().Get("precision")
 	if precision != "" {
@@ -34,7 +39,7 @@ func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 			}()
 			return _res.Error
 		}
-		promises = append(promises, repository.Store("", _res.Table, _res.Data))
+		promises = append(promises, repository.Store(database, _res.Table, _res.Data))
 	}
 	for _, p := range promises {
 		_, err = p.Get()
