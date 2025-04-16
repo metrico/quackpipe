@@ -68,7 +68,7 @@ As write requests come in to GigAPI they are parsed and progressively appeanded 
 GigAPI provides an HTTP API for clients to write, currently supporting the InfluxDB Line Protocol format 
 
 ```bash
-cat <<EOF | curl -X POST http://localhost:7971/write --data-binary @/dev/stdin
+cat <<EOF | curl -X POST "http://localhost:7971/write?db=mydb" --data-binary @/dev/stdin
 weather,location=us-midwest,season=summer temperature=82
 weather,location=us-east,season=summer temperature=80
 weather,location=us-west,season=summer temperature=99
