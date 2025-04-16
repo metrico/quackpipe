@@ -48,9 +48,17 @@ func InitHandlers() {
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
+	
+	// InfluxDB3 Compatibility Endpoints
 	router.RegisterRoute(&router.Route{
 		Path:    "/write",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
+	router.RegisterRoute(&router.Route{
+		Path:    "/api/v3/write_lp",
+		Methods: []string{"POST"},
+		Handler: handlers.InsertIntoHandler,
+	})
+	
 }
