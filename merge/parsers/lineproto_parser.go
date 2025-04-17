@@ -8,6 +8,8 @@ import (
 	"github.com/go-faster/city"
 	_ "github.com/go-faster/city"
 	"io"
+	"regexp"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -88,6 +90,8 @@ func appendData(data *map[string]any, k string, v any) {
 	}
 }
 
+var re = regexp.MustCompile(`^[^.,]+\.`)
+
 func (l *LineProtoParser) parse(scanner *bufio.Scanner, res chan *ParserResponse, precision string) {
 	defer close(res)
 
@@ -96,9 +100,14 @@ func (l *LineProtoParser) parse(scanner *bufio.Scanner, res chan *ParserResponse
 		schemaId uint64
 		data     map[string]any = make(map[string]any)
 	)
-
 	send := func() {
-		res <- &ParserResponse{Table: table, Data: data}
+		database := ""
+		if strings.Contains(table, ".") {
+			databaseTable := strings.SplitN(table, ".", 2)
+			database = databaseTable[0]
+			table = databaseTable[1]
+		}
+		res <- &ParserResponse{Database: database, Table: table, Data: data}
 		data = make(map[string]any)
 		table = ""
 		schemaId = 0
@@ -120,10 +129,11 @@ func (l *LineProtoParser) parse(scanner *bufio.Scanner, res chan *ParserResponse
 
 		for _, p := range point {
 			_table := p.Name()
-			if table != string(_table) && table != "" {
+			__table := string(_table)
+			if table != __table && table != "" {
 				send()
 			}
-			table = string(_table)
+			table = __table
 			fields, err := p.Fields()
 			if err != nil {
 				onErr(fmt.Errorf("error getting fields: %w", err))

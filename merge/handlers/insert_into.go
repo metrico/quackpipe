@@ -5,17 +5,26 @@ import (
 	"github.com/gigapi/gigapi/merge/parsers"
 	"github.com/gigapi/gigapi/merge/repository"
 	"github.com/gigapi/gigapi/utils"
+	"github.com/gorilla/mux"
 	"net/http"
 )
+
+func getDatabase(r *http.Request) string {
+	if db := r.URL.Query().Get("db"); db != "" {
+		return db
+	}
+	vars := mux.Vars(r)
+	if db, ok := vars["db"]; ok {
+		return db
+	}
+	return ""
+}
 
 func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 	contentType := r.Header.Get("Content-Type")
 	parser, err := parsers.GetParser(contentType, nil, nil)
 
-	database := r.URL.Query().Get("db")
-	if database == "" {
-		database = "default"
-	}
+	database := getDatabase(r)
 
 	ctx := r.Context()
 	precision := r.URL.Query().Get("precision")
@@ -39,7 +48,11 @@ func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 			}()
 			return _res.Error
 		}
-		promises = append(promises, repository.Store(database, _res.Table, _res.Data))
+		_database := database
+		if _database == "" {
+			database = _res.Database
+		}
+		promises = append(promises, repository.Store(_database, _res.Table, _res.Data))
 	}
 	for _, p := range promises {
 		_, err = p.Get()

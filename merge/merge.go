@@ -51,7 +51,12 @@ func InitHandlers() {
 	
 	// InfluxDB3 Compatibility Endpoints
 	router.RegisterRoute(&router.Route{
-		Path:    "/write",
+		Path:    "/gigapi/write/{db}",
+		Methods: []string{"POST"},
+		Handler: handlers.InsertIntoHandler,
+	})
+	router.RegisterRoute(&router.Route{
+		Path:    "/gigapi/write",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
