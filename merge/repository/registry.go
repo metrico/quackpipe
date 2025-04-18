@@ -140,7 +140,7 @@ func RegisterSimpleTable(db, name string) error {
 		defer m.Unlock()
 		idxName := make([]string, len(values))
 		for i, v := range values {
-			idxName[i] = fmt.Sprintf("%s=%s", table.Name, v[0])
+			idxName[i] = fmt.Sprintf("%s=%s", v[0], v[1])
 		}
 		idx, ok := parts[path.Join(idxName...)]
 		if !ok {
