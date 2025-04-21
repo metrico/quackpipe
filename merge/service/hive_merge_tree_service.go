@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/ast"
@@ -13,10 +14,14 @@ import (
 	"github.com/gigapi/gigapi/utils"
 	"github.com/go-faster/city"
 	"golang.org/x/sync/errgroup"
+	"io/fs"
 	"math"
+	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -149,8 +154,67 @@ func NewHiveMergeTreeService(t *shared.Table) (*HiveMergeTreeService, error) {
 		partitions: make(map[uint64]*Partition),
 	}
 	res.flushCtx, res.doFlush = context.WithTimeout(context.Background(), time.Second)
+	err := res.discoverPartitions()
+	if err != nil {
+		return nil, err
+	}
 	//err := res.parsePartitionInfo()
 	return res, nil
+}
+
+func (h *HiveMergeTreeService) discoverPartitions() error {
+	lastSuffix := fmt.Sprintf(".%d.parquet", MERGE_ITERATIONS+1)
+	err := filepath.Walk(h.Table.Path, func(p string, info fs.FileInfo, err error) error {
+		if !info.IsDir() {
+			return nil
+		}
+		_, err = os.Stat(path.Join(p, "metadata.json"))
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		isLivePartition := false
+		entries, err := os.ReadDir(p)
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			if strings.HasSuffix(entry.Name(), ".parquet") &&
+				!strings.HasSuffix(entry.Name(), lastSuffix) {
+				isLivePartition = true
+			}
+		}
+
+		strPartitionPath := strings.TrimPrefix(p, h.Table.Path+string(filepath.Separator))
+		if !isLivePartition {
+			return filepath.SkipDir
+		}
+		arrPartitionPath := strings.Split(strPartitionPath, string(filepath.Separator))
+		values := make([][2]string, 0, len(arrPartitionPath))
+		for _, p := range arrPartitionPath {
+			kv := strings.SplitN(p, "=", 2)
+			if len(kv) < 2 {
+				fmt.Println("Invalid partition path: " + strPartitionPath)
+				return nil
+			}
+			values = append(values, [2]string{kv[0], kv[1]})
+		}
+		id := h.calculatePartitionHash(values)
+		if _, ok := h.partitions[id]; !ok {
+			h.partitions[id], err = NewPartition(values,
+				path.Join(h.Table.Path, "tmp"),
+				h.getDataPath(values),
+				h.Table)
+			if err != nil {
+				return err
+			}
+		}
+		return filepath.SkipDir
+	})
+	return err
 }
 
 /*func (h *HiveMergeTreeService) parsePartitionInfo() error {
