@@ -30,7 +30,7 @@ type JSONIndex struct {
 	t       *shared.Table
 	idxPath string
 
-	entries   map[string]*jsonIndexEntry
+	entries   *sync.Map
 	promises  []utils.Promise[int32]
 	m         sync.Mutex
 	updateCtx context.Context
@@ -49,7 +49,7 @@ func NewJSONIndex(t *shared.Table) (shared.Index, error) {
 	res := &JSONIndex{
 		t:       t,
 		idxPath: t.Path,
-		entries: make(map[string]*jsonIndexEntry),
+		entries: &sync.Map{},
 	}
 	err := res.populate()
 	res.updateCtx, res.doUpdate = context.WithCancel(context.Background())
@@ -66,7 +66,7 @@ func NewJSONIndexForPartition(t *shared.Table, values [][2]string) (shared.Index
 	res := &JSONIndex{
 		t:       t,
 		idxPath: path.Join(folders...),
-		entries: make(map[string]*jsonIndexEntry),
+		entries: &sync.Map{},
 	}
 	err := res.populate()
 	res.updateCtx, res.doUpdate = context.WithCancel(context.Background())
@@ -129,7 +129,7 @@ func (J *JSONIndex) populateFiles(iter *jsoniter.Iterator) error {
 		if e.Id > J.lastId {
 			J.lastId = e.Id
 		}
-		J.entries[e.Path] = e
+		J.entries.Store(e.Path, e)
 	}
 	return nil
 }
@@ -190,7 +190,7 @@ func (J *JSONIndex) add(entries []*jsonIndexEntry) {
 	for _, entry := range entries {
 		J.rowCount += entry.RowCount
 		J.parquetSizeBytes += entry.SizeBytes
-		J.entries[entry.Path] = entry
+		J.entries.Store(entry.Path, entry)
 		if entry.Id == 1 {
 			J.minTime = entry.MinTime
 			J.maxTime = entry.MaxTime
@@ -211,14 +211,15 @@ func (J *JSONIndex) recalcMin() {
 		return
 	}
 	var i int
-	for _, entry := range J.entries {
+	J.entries.Range(func(key, value interface{}) bool {
+		entry := value.(*jsonIndexEntry)
 		if i == 0 {
 			J.minTime = entry.MinTime
 			i++
-			continue
 		}
 		J.minTime = min(J.minTime, entry.MinTime)
-	}
+		return true
+	})
 }
 
 func (J *JSONIndex) recalcMax() {
@@ -227,27 +228,29 @@ func (J *JSONIndex) recalcMax() {
 		return
 	}
 	var i int
-	for _, entry := range J.entries {
+	J.entries.Range(func(key, value interface{}) bool {
+		entry := value.(*jsonIndexEntry)
 		if i == 0 {
 			J.maxTime = entry.MaxTime
 			i++
-			continue
 		}
 		J.maxTime = max(J.maxTime, entry.MaxTime)
-	}
+		return true
+	})
 }
 
 func (J *JSONIndex) rm(path []string) bool {
 	rm := false
 	for _, entry := range path {
-		_e, ok := J.entries[entry]
+		e, ok := J.entries.Load(entry)
 		if !ok {
 			continue
 		}
+		_e := e.(*jsonIndexEntry)
 		rm = true
 		J.rowCount -= _e.RowCount
 		J.parquetSizeBytes -= _e.SizeBytes
-		delete(J.entries, entry)
+		J.entries.Delete(entry)
 		if _e.MinTime == J.minTime {
 			J.recalcMin()
 		}
@@ -261,16 +264,17 @@ func (J *JSONIndex) rm(path []string) bool {
 func (J *JSONIndex) flush() {
 	J.m.Lock()
 	J.updateCtx, J.doUpdate = context.WithCancel(context.Background())
-	entries := make([]string, 0, len(J.entries))
+	var entries []string
 	parquetSizeBytes := J.parquetSizeBytes
 	promises := J.promises
 	J.promises = nil
 	rowCount := J.rowCount
 	minTime := J.minTime
 	maxTime := J.maxTime
-	for _, entry := range J.entries {
-		entries = append(entries, entry._marshalled)
-	}
+	J.entries.Range(func(key, value any) bool {
+		entries = append(entries, value.(*jsonIndexEntry)._marshalled)
+		return true
+	})
 	J.m.Unlock()
 
 	onErr := func(err error) {
@@ -370,11 +374,11 @@ func (J *JSONIndex) Stop() {
 }
 
 func (J *JSONIndex) Get(path string) *shared.IndexEntry {
-	_e := J.entries[path]
-	if _e == nil {
+	e, _ := J.entries.Load(path)
+	if e == nil {
 		return nil
 	}
-
+	_e := e.(*jsonIndexEntry)
 	return &shared.IndexEntry{
 		Path:      _e.Path,
 		SizeBytes: _e.SizeBytes,
