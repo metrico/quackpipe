@@ -74,9 +74,10 @@ func InitHandlers() {
 	router.RegisterRoute(&router.Route{
 		Path:    "/health",
 		Methods: []string{"GET"},
-		Handler: func(w http.ResponseWriter, r *http.Request) {
+		Handler: func(w http.ResponseWriter, r *http.Request) error {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("OK"))
+			return nil
 		},
 	})
 
