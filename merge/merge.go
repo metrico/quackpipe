@@ -70,5 +70,13 @@ func InitHandlers() {
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
+	router.RegisterRoute(&router.Route{
+		Path:    "/health",
+		Methods: []string{"GET"},
+		Handler: func(ctx router.Context) {
+			ctx.ResponseWriter.WriteHeader(200)
+			ctx.ResponseWriter.Write([]byte("OK"))
+		},
+	})
 
 }
