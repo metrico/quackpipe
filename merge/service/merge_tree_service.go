@@ -335,6 +335,7 @@ func getMergeConfigurations() [][3]int64 {
 		{timeoutS, 100 * 1024 * 1024, 1},
 		{timeoutS * 10, 400 * 1024 * 1024, 2},
 		{timeoutS * 100, 4000 * 1024 * 1024, 3},
+		{timeoutS * 300, 4000 * 1024 * 1024, 4},
 	}
 }
 
