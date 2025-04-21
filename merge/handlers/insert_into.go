@@ -60,7 +60,7 @@ func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Ok"))
+	w.WriteHeader(http.StatusNoContent)
+	// w.Write([]byte("Ok"))
 	return nil
 }
