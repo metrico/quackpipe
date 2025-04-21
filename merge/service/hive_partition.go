@@ -21,17 +21,19 @@ type Partition struct {
 	table             *shared.Table
 	lastStore         time.Time
 	lastSave          time.Time
-	lastIterationTime [3]time.Time
+	lastIterationTime [MERGE_ITERATIONS]time.Time
 	dataPath          string
 }
 
 func NewPartition(values [][2]string, tmpPath, dataPath string, t *shared.Table) (*Partition, error) {
 	res := &Partition{
-		Values:            values,
-		unordered:         newUnorderedDataStore(),
-		table:             t,
-		lastIterationTime: [3]time.Time{time.Now(), time.Now(), time.Now()},
-		dataPath:          dataPath,
+		Values:    values,
+		unordered: newUnorderedDataStore(),
+		table:     t,
+		dataPath:  dataPath,
+	}
+	for i := range res.lastIterationTime {
+		res.lastIterationTime[i] = time.Now()
 	}
 	if t.IndexCreator != nil {
 		var err error

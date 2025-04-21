@@ -32,7 +32,7 @@ type MergeTreeService struct {
 	mtx                sync.Mutex
 	save               saveService
 	merge              mergeService
-	lastIterationTime  [3]time.Time
+	lastIterationTime  [MERGE_ITERATIONS]time.Time
 	unorderedDataStore *unorderedDataStore
 
 	less func(store any, i int32, j int32) bool
@@ -55,7 +55,9 @@ func NewMergeTreeService(t *shared.Table) (*MergeTreeService, error) {
 		return nil, err
 	}
 	res.merge, err = res.newMergeService()
-	res.lastIterationTime = [3]time.Time{time.Now(), time.Now(), time.Now()}
+	for i := range res.lastIterationTime {
+		res.lastIterationTime[i] = time.Now()
+	}
 	return res, err
 }
 
@@ -326,6 +328,8 @@ type FileDesc struct {
 	name string
 	size int64
 }
+
+const MERGE_ITERATIONS = 4
 
 // get merge configurations from the overall configuration
 // Each merge configuration is [3]int64 array {timeout in seconds, max result bytes, iteration id}
