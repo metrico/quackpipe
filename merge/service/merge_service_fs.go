@@ -242,6 +242,32 @@ func (f *fsMergeService) mergeFirstIteration(p PlanMerge) error {
 	return nil
 }
 
+func (f *fsMergeService) mergeMany(p PlanMerge, tmpFilePath, finalFilePath string) error {
+	conn, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	err = installChSql(conn)
+	if err != nil {
+		return err
+	}
+
+	createTableSQL := fmt.Sprintf(
+		`COPY(SELECT * FROM read_parquet_mergetree(ARRAY['%s'], '%s'))TO '%s' (FORMAT 'parquet')`,
+		strings.Join(p.From, "','"),
+		strings.Join(f.table.OrderBy, ","), tmpFilePath)
+	_, err = conn.Exec(createTableSQL)
+
+	if err != nil {
+		fmt.Println("Error read_parquet_mergetree: ", err)
+		return err
+	}
+
+	err = os.Rename(tmpFilePath, finalFilePath)
+	return err
+}
+
 func (f *fsMergeService) merge(p PlanMerge) error {
 	if p.Iteration == 1 {
 		return f.mergeFirstIteration(p)
@@ -257,32 +283,14 @@ func (f *fsMergeService) merge(p PlanMerge) error {
 		fmt.Printf("  Tmp path: %s\n", tmpFilePath)
 		fmt.Printf("  Data path: %s\n", finalFilePath)
 	*/
+
+	var err error
+
 	if len(p.From) == 1 {
-		return os.Rename(p.From[0], finalFilePath)
+		err = os.Rename(p.From[0], finalFilePath)
+	} else {
+		err = f.mergeMany(p, tmpFilePath, finalFilePath)
 	}
-
-	conn, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
-	if err != nil {
-		return err
-	}
-	err = installChSql(conn)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	createTableSQL := fmt.Sprintf(
-		`COPY(SELECT * FROM read_parquet_mergetree(ARRAY['%s'], '%s'))TO '%s' (FORMAT 'parquet')`,
-		strings.Join(p.From, "','"),
-		strings.Join(f.table.OrderBy, ","), tmpFilePath)
-	_, err = conn.Exec(createTableSQL)
-
-	if err != nil {
-		fmt.Println("Error read_parquet_mergetree: ", err)
-		return err
-	}
-
-	err = os.Rename(tmpFilePath, finalFilePath)
 	if err != nil {
 		return err
 	}
