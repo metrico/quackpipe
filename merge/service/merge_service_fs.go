@@ -206,10 +206,11 @@ func (f *fsMergeService) mergeFirstIteration(p PlanMerge) error {
 	defer firstIterationSemaphore.Release(1)
 	tmpFilePath := filepath.Join(f.tmpPath, p.To)
 	finalFilePath := filepath.Join(f.dataPath, p.To)
-	conn, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
+	conn, cancel, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
 	if err != nil {
 		return err
 	}
+	defer cancel()
 	createTableSQL := fmt.Sprintf(
 		`COPY(FROM read_parquet(ARRAY['%s'], hive_partitioning = false, union_by_name = true) ORDER BY %s)TO '%s' (FORMAT 'parquet')`,
 		strings.Join(p.From, "','"),
@@ -243,11 +244,11 @@ func (f *fsMergeService) mergeFirstIteration(p PlanMerge) error {
 }
 
 func (f *fsMergeService) mergeMany(p PlanMerge, tmpFilePath, finalFilePath string) error {
-	conn, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
+	conn, cancel, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer cancel()
 	err = installChSql(conn)
 	if err != nil {
 		return err

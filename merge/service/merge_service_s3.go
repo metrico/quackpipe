@@ -74,10 +74,11 @@ func (s *s3MergeService) merge(p PlanMerge) error {
 	// Create a temporary merged file
 	tmpFilePath := filepath.Join(s.tmpPath, p.To)
 
-	conn, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
+	conn, cancel, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
 	if err != nil {
 		return err
 	}
+	defer cancel()
 	_, err = conn.Exec("INSTALL chsql FROM community")
 	if err != nil {
 		fmt.Println("Error loading chsql extension: ", err)

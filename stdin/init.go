@@ -36,10 +36,11 @@ func processStdin() {
 		panic(fmt.Sprintf("Error reading from stdin: %v", err))
 	}
 
-	db, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
+	db, cancel, err := utils.ConnectDuckDB("?allow_unsigned_extensions=1")
 	if err != nil {
 		panic(fmt.Sprintf("Error connecting to DuckDB: %v", err))
 	}
+	defer cancel()
 
 	_, err = db.Exec(string(content))
 	if err != nil {
