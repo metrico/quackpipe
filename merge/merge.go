@@ -50,7 +50,6 @@ func InitHandlers() {
 		Handler: handlers.InsertIntoHandler,
 	})
 
-	// InfluxDB3 Compatibility Endpoints
 	router.RegisterRoute(&router.Route{
 		Path:    "/gigapi/write/{db}",
 		Methods: []string{"POST"},
@@ -61,8 +60,15 @@ func InitHandlers() {
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
+	
+	// InfluxDB 2+3 compatibility endpoints
 	router.RegisterRoute(&router.Route{
 		Path:    "/write",
+		Methods: []string{"POST"},
+		Handler: handlers.InsertIntoHandler,
+	})
+	router.RegisterRoute(&router.Route{
+		Path:    "/api/v2/write",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
@@ -72,13 +78,23 @@ func InitHandlers() {
 		Handler: handlers.InsertIntoHandler,
 	})
 	router.RegisterRoute(&router.Route{
-		Path:    "/health",
-		Methods: []string{"GET"},
-		Handler: func(w http.ResponseWriter, r *http.Request) error {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
-			return nil
-		},
+	    Path:    "/health",
+	    Methods: []string{"GET"},
+	    Handler: func(w http.ResponseWriter, r *http.Request) error {
+		response := `{"checks": [], "commit": "null-commit", "message": "Service is healthy", "name": "GigAPI", "status": "pass", "version": "0.0.0"}`
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(response + "\n"))
+		return nil
+	    },
+	})
+	router.RegisterRoute(&router.Route{
+	    Path:    "/ping",
+	    Methods: []string{"GET"},
+	    Handler: func(w http.ResponseWriter, r *http.Request) error {
+	        w.WriteHeader(http.StatusNoContent)
+	        return nil
+	    },
 	})
 
 }
