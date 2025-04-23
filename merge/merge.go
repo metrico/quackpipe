@@ -78,19 +78,21 @@ func InitHandlers() {
 		Handler: handlers.InsertIntoHandler,
 	})
 	router.RegisterRoute(&router.Route{
-		Path:    "/health",
-		Methods: []string{"GET"},
-		Handler: func(w http.ResponseWriter, r *http.Request) {
-		    w.WriteHeader(http.StatusOK)
-		    w.Write([]byte("OK"))
-		},
+	    Path:    "/health",
+	    Methods: []string{"GET"},
+	    Handler: func(w http.ResponseWriter, r *http.Request) error {
+	        w.WriteHeader(http.StatusOK)
+	        w.Write([]byte("OK"))
+	        return nil
+	    },
 	})
 	router.RegisterRoute(&router.Route{
-		Path:    "/ping",
-		Methods: []string{"GET"},
-		Handler: func(w http.ResponseWriter, r *http.Request) {
-		    w.WriteHeader(http.StatusNoContent)
-		},
+	    Path:    "/ping",
+	    Methods: []string{"GET"},
+	    Handler: func(w http.ResponseWriter, r *http.Request) error {
+	        w.WriteHeader(http.StatusNoContent)
+	        return nil
+	    },
 	})
 
 }
