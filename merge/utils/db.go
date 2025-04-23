@@ -22,9 +22,14 @@ var poolSize int32
 func init() {
 	t := time.NewTicker(time.Second * 30)
 	go func() {
-		for range t.C {
-			fmt.Printf("Duckdb pool stats: %d active / %d idle\n", atomic.LoadInt32(&dbHeld), atomic.LoadInt32(&poolSize))
-		}
+	    for range t.C {
+	        active := atomic.LoadInt32(&dbHeld)
+	        idle := atomic.LoadInt32(&poolSize)
+	        // Print when usage is high
+	        if active >= idle-2 {
+	            fmt.Printf("Duckdb pool stats: %d active / %d idle\n", active, idle)
+	        }
+	    }
 	}()
 
 }
