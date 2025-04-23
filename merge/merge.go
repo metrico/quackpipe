@@ -83,14 +83,14 @@ func InitHandlers() {
 		Handler: func(w http.ResponseWriter, r *http.Request) {
 		    w.WriteHeader(http.StatusOK)
 		    w.Write([]byte("OK"))
-		}
+		},
 	})
 	router.RegisterRoute(&router.Route{
 		Path:    "/ping",
 		Methods: []string{"GET"},
 		Handler: func(w http.ResponseWriter, r *http.Request) {
 		    w.WriteHeader(http.StatusNoContent)
-		}
+		},
 	})
 
 }
