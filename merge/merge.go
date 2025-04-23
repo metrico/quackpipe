@@ -67,6 +67,11 @@ func InitHandlers() {
 		Handler: handlers.InsertIntoHandler,
 	})
 	router.RegisterRoute(&router.Route{
+		Path:    "/api/v2/write",
+		Methods: []string{"POST"},
+		Handler: handlers.InsertIntoHandler,
+	})
+	router.RegisterRoute(&router.Route{
 		Path:    "/api/v3/write_lp",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
