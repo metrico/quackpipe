@@ -81,17 +81,10 @@ func InitHandlers() {
 	    Path:    "/health",
 	    Methods: []string{"GET"},
 	    Handler: func(w http.ResponseWriter, r *http.Request) error {
-		response := `{
-			"checks": [],
-			"commit": "null-commit",
-			"message": "Service is healthy",
-			"name": "GigAPI",
-			"status": "pass",
-			"version": "0.0.0"
-		}`
+		response := `{"checks": [], "commit": "null-commit", "message": "Service is healthy", "name": "GigAPI", "status": "pass", "version": "0.0.0"}`
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(response))
+		w.Write([]byte(response + "\n"))
 		return nil
 	    },
 	})
