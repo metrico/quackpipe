@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"compress/gzip"
 	"context"
 	"github.com/gigapi/gigapi/merge/parsers"
 	"github.com/gigapi/gigapi/merge/repository"
 	"github.com/gigapi/gigapi/utils"
 	"github.com/gorilla/mux"
+	"io"
 	"net/http"
 )
 
@@ -35,7 +37,19 @@ func InsertIntoHandler(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	res, err := parser.ParseReader(ctx, r.Body)
+
+	// Handle gzip compression
+	var reader io.Reader = r.Body
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		gzipReader, err := gzip.NewReader(r.Body)
+		if err != nil {
+			return err
+		}
+		defer gzipReader.Close()
+		reader = gzipReader
+	}
+
+	res, err := parser.ParseReader(ctx, reader)
 	if err != nil {
 		return err
 	}
