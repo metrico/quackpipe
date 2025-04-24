@@ -41,6 +41,14 @@ func NewPartition(values [][2]string, tmpPath, dataPath string, t *shared.Table)
 		if err != nil {
 			return nil, err
 		}
+		dropQueue := res.index.GetDropQueue()
+		go func() {
+			time.Sleep(time.Second * 10)
+			for _, file := range dropQueue {
+				os.Remove(filepath.Join(res.dataPath, file))
+			}
+			res.index.RmFromDropQueue(dropQueue)
+		}()
 	}
 	err := res.initServices(tmpPath, dataPath, t)
 	return res, err

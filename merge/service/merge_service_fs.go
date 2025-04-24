@@ -233,14 +233,22 @@ func (f *fsMergeService) mergeFirstIteration(p PlanMerge) error {
 		}
 	}
 
+	f.cleanup(p)
+
+	return nil
+}
+
+func (f *fsMergeService) cleanup(p PlanMerge) {
 	for _, file := range p.From {
 		_file := file
 		go func() {
 			<-time.After(time.Second * 30)
 			os.Remove(_file)
+			if f.index != nil {
+				f.index.RmFromDropQueue([]string{_file})
+			}
 		}()
 	}
-	return nil
 }
 
 func (f *fsMergeService) mergeMany(p PlanMerge, tmpFilePath, finalFilePath string) error {
@@ -303,14 +311,7 @@ func (f *fsMergeService) merge(p PlanMerge) error {
 		}
 	}
 
-	for _, file := range p.From {
-		_file := file
-		go func() {
-			<-time.After(time.Second * 30)
-			os.Remove(_file)
-		}()
-	}
-
+	f.cleanup(p)
 	return nil
 }
 
@@ -352,6 +353,7 @@ func (f *fsMergeService) updateIndex(merge PlanMerge) error {
 		Max:       _max,
 	}
 	prom := f.index.Batch([]*shared.IndexEntry{newIdx}, toDelete)
+	f.index.AddToDropQueue(merge.From)
 	_, err = prom.Get()
 	return err
 }

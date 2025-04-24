@@ -39,6 +39,7 @@ type JSONIndex struct {
 	stop      context.CancelFunc
 	lastId    uint32
 
+	dropQueue        []string
 	parquetSizeBytes int64
 	rowCount         int64
 	minTime          int64
@@ -74,6 +75,48 @@ func NewJSONIndexForPartition(t *shared.Table, values [][2]string) (shared.Index
 	return res, err
 }
 
+func (J *JSONIndex) AddToDropQueue(files []string) utils.Promise[int32] {
+	J.m.Lock()
+	defer J.m.Unlock()
+
+	J.dropQueue = append(J.dropQueue, files...)
+	p := utils.New[int32]()
+	J.promises = append(J.promises, p)
+	J.doUpdate()
+	return p
+}
+
+func (J *JSONIndex) RmFromDropQueue(files []string) utils.Promise[int32] {
+	J.m.Lock()
+	defer J.m.Unlock()
+
+	updated := false
+	for i := len(J.dropQueue) - 1; i >= 0; i-- {
+		for _, file := range files {
+			if J.dropQueue[i] != file {
+				continue
+			}
+			J.dropQueue[i] = J.dropQueue[len(J.dropQueue)-1]
+			J.dropQueue = J.dropQueue[:len(J.dropQueue)-1]
+			updated = true
+			break
+		}
+	}
+
+	if !updated {
+		return utils.Fulfilled[int32](nil, 0)
+	}
+
+	p := utils.New[int32]()
+	J.promises = append(J.promises, p)
+	J.doUpdate()
+	return p
+}
+
+func (J *JSONIndex) GetDropQueue() []string {
+	return J.dropQueue
+}
+
 func (J *JSONIndex) populate() error {
 	if _, err := os.Stat(path.Join(J.idxPath, "metadata.json")); os.IsNotExist(err) {
 		return nil
@@ -88,6 +131,11 @@ func (J *JSONIndex) populate() error {
 	iter := jsoniter.Parse(jsoniter.ConfigDefault, f, 4096)
 	iter.ReadMapCB(func(iterator *jsoniter.Iterator, s string) bool {
 		switch s {
+		case "drop_queue":
+			for iterator.ReadArray() {
+				dropQueueEntry := iterator.ReadString()
+				J.dropQueue = append(J.dropQueue, dropQueueEntry)
+			}
 		case "type":
 			iterator.Skip()
 		case "parquet_size_bytes":
@@ -265,6 +313,7 @@ func (J *JSONIndex) flush() {
 	J.m.Lock()
 	J.updateCtx, J.doUpdate = context.WithCancel(context.Background())
 	var entries []string
+	dropQueue := J.dropQueue
 	parquetSizeBytes := J.parquetSizeBytes
 	promises := J.promises
 	J.promises = nil
@@ -317,6 +366,17 @@ func (J *JSONIndex) flush() {
 	stream.WriteMore()
 	stream.WriteObjectField("wal_sequence")
 	stream.WriteInt64(0)
+
+	stream.WriteMore()
+	stream.WriteObjectField("drop_queue")
+	stream.WriteArrayStart()
+	for i, d := range dropQueue {
+		if i > 0 {
+			stream.WriteMore()
+		}
+		stream.WriteString(d)
+	}
+	stream.WriteArrayEnd()
 
 	stream.WriteMore()
 	stream.WriteObjectField("files")

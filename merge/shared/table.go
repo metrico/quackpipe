@@ -24,6 +24,9 @@ type Index interface {
 	Get(path string) *IndexEntry
 	Run()
 	Stop()
+	AddToDropQueue(files []string) utils.Promise[int32]
+	RmFromDropQueue(files []string) utils.Promise[int32]
+	GetDropQueue() []string
 }
 
 type Table struct {
