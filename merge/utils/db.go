@@ -19,7 +19,7 @@ type dbWrapper struct {
 var dbHeld int32
 var poolSize int32
 
-func init() {
+/*func init() {
 	t := time.NewTicker(time.Second * 30)
 	go func() {
 	    for range t.C {
@@ -32,7 +32,7 @@ func init() {
 	    }
 	}()
 
-}
+}*/
 
 // ConnectDuckDB opens and returns a connection to DuckDB.
 func ConnectDuckDB(filePath string) (*sql.DB, func(), error) {
