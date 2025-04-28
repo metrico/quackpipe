@@ -4,14 +4,26 @@ import (
 	"fmt"
 	"github.com/gigapi/gigapi/config"
 	"github.com/gigapi/gigapi/merge"
+	"github.com/gigapi/gigapi/modules"
 	"github.com/gigapi/gigapi/router"
 	"github.com/gigapi/gigapi/stdin"
 	"net/http"
 )
 
+type api struct {
+}
+
+func (a api) RegisterRoute(r *modules.Route) {
+	router.RegisterRoute(r)
+}
+
+func (a api) GetPathParams(r *http.Request) map[string]string {
+	return router.GetPathParams(r)
+}
+
 func initModules() {
 	stdin.Init()
-	merge.Init()
+	merge.Init(&api{})
 }
 
 func main() {

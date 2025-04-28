@@ -1,15 +1,10 @@
 package router
 
 import (
+	"github.com/gigapi/gigapi/modules"
 	"github.com/gorilla/mux"
 	"net/http"
 )
-
-type Route struct {
-	Path    string
-	Methods []string
-	Handler func(w http.ResponseWriter, r *http.Request) error
-}
 
 func WithErrorHandle(hndl func(w http.ResponseWriter, r *http.Request) error,
 ) func(w http.ResponseWriter, r *http.Request) {
@@ -22,9 +17,9 @@ func WithErrorHandle(hndl func(w http.ResponseWriter, r *http.Request) error,
 	}
 }
 
-var handlerRegistry []*Route = nil
+var handlerRegistry []*modules.Route = nil
 
-func RegisterRoute(r *Route) {
+func RegisterRoute(r *modules.Route) {
 	handlerRegistry = append(handlerRegistry, r)
 }
 
@@ -34,4 +29,8 @@ func NewRouter() *mux.Router {
 		router.HandleFunc(r.Path, WithErrorHandle(r.Handler)).Methods(r.Methods...)
 	}
 	return router
+}
+
+func GetPathParams(r *http.Request) map[string]string {
+	return mux.Vars(r)
 }

@@ -5,17 +5,19 @@ import (
 	"context"
 	"github.com/gigapi/gigapi/merge/parsers"
 	"github.com/gigapi/gigapi/merge/repository"
+	"github.com/gigapi/gigapi/modules"
 	"github.com/gigapi/gigapi/utils"
-	"github.com/gorilla/mux"
 	"io"
 	"net/http"
 )
+
+var API modules.Api
 
 func getDatabase(r *http.Request) string {
 	if db := r.URL.Query().Get("db"); db != "" {
 		return db
 	}
-	vars := mux.Vars(r)
+	vars := API.GetPathParams(r)
 	if db, ok := vars["db"]; ok {
 		return db
 	}

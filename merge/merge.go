@@ -5,12 +5,12 @@ import (
 	"github.com/gigapi/gigapi/merge/handlers"
 	"github.com/gigapi/gigapi/merge/repository"
 	"github.com/gigapi/gigapi/merge/utils"
-	"github.com/gigapi/gigapi/router"
+	"github.com/gigapi/gigapi/modules"
 	"net/http"
 	"os"
 )
 
-func Init() {
+func Init(api modules.Api) {
 	err := os.MkdirAll(config.Config.Gigapi.Root, 0750)
 	if err != nil {
 		panic(err)
@@ -36,49 +36,50 @@ func Init() {
 		panic(err)
 	}
 
-	InitHandlers()
+	InitHandlers(api)
 }
 
-func InitHandlers() {
-	router.RegisterRoute(&router.Route{
+func InitHandlers(api modules.Api) {
+	handlers.API = api
+	api.RegisterRoute(&modules.Route{
 		Path:    "/gigapi/create",
 		Methods: []string{"POST"},
 		Handler: handlers.CreateTableHandler,
 	})
-	router.RegisterRoute(&router.Route{
+	api.RegisterRoute(&modules.Route{
 		Path:    "/gigapi/insert",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
 
-	router.RegisterRoute(&router.Route{
+	api.RegisterRoute(&modules.Route{
 		Path:    "/gigapi/write/{db}",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
-	router.RegisterRoute(&router.Route{
+	api.RegisterRoute(&modules.Route{
 		Path:    "/gigapi/write",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
 
 	// InfluxDB 2+3 compatibility endpoints
-	router.RegisterRoute(&router.Route{
+	api.RegisterRoute(&modules.Route{
 		Path:    "/write",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
-	router.RegisterRoute(&router.Route{
+	api.RegisterRoute(&modules.Route{
 		Path:    "/api/v2/write",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
-	router.RegisterRoute(&router.Route{
+	api.RegisterRoute(&modules.Route{
 		Path:    "/api/v3/write_lp",
 		Methods: []string{"POST"},
 		Handler: handlers.InsertIntoHandler,
 	})
-	router.RegisterRoute(&router.Route{
+	api.RegisterRoute(&modules.Route{
 		Path:    "/health",
 		Methods: []string{"GET"},
 		Handler: func(w http.ResponseWriter, r *http.Request) error {
@@ -89,7 +90,7 @@ func InitHandlers() {
 			return nil
 		},
 	})
-	router.RegisterRoute(&router.Route{
+	api.RegisterRoute(&modules.Route{
 		Path:    "/ping",
 		Methods: []string{"GET"},
 		Handler: func(w http.ResponseWriter, r *http.Request) error {
