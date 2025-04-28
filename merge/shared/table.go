@@ -1,8 +1,8 @@
 package shared
 
 import (
-	"github.com/gigapi/gigapi/merge/data_types"
-	"github.com/gigapi/gigapi/utils"
+	"github.com/gigapi/gigapi/v2/merge/data_types"
+	"github.com/gigapi/gigapi/v2/utils"
 )
 
 type PartitionDesc struct {

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/gigapi/gigapi/merge/utils"
+	"github.com/gigapi/gigapi/v2/merge/utils"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/sync/errgroup"

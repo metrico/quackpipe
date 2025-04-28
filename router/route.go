@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/gigapi/gigapi/modules"
+	"github.com/gigapi/gigapi/v2/modules"
 	"github.com/gorilla/mux"
 	"net/http"
 )

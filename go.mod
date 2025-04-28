@@ -1,4 +1,4 @@
-module github.com/gigapi/gigapi
+module github.com/gigapi/gigapi/v2
 
 go 1.24
 

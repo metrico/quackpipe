@@ -1,8 +1,8 @@
-module github.com/gigapi/gigapi/examples/mil_rows
+module github.com/gigapi/gigapi/v2/examples/mil_rows
 
 go 1.24.2
 
-require github.com/gigapi/gigapi v1.2.3-alpha
+require github.com/gigapi/gigapi/v2 v2.0.12
 
 require (
 	github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c // indirect

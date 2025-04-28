@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/gigapi/gigapi/config"
-	"github.com/gigapi/gigapi/merge"
-	"github.com/gigapi/gigapi/modules"
-	"github.com/gigapi/gigapi/router"
-	"github.com/gigapi/gigapi/stdin"
+	"github.com/gigapi/gigapi/v2/config"
+	"github.com/gigapi/gigapi/v2/merge"
+	"github.com/gigapi/gigapi/v2/modules"
+	"github.com/gigapi/gigapi/v2/router"
+	"github.com/gigapi/gigapi/v2/stdin"
 	"net/http"
 )
 

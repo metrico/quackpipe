@@ -1,11 +1,11 @@
 package merge
 
 import (
-	"github.com/gigapi/gigapi/config"
-	"github.com/gigapi/gigapi/merge/handlers"
-	"github.com/gigapi/gigapi/merge/repository"
-	"github.com/gigapi/gigapi/merge/utils"
-	"github.com/gigapi/gigapi/modules"
+	"github.com/gigapi/gigapi/v2/config"
+	"github.com/gigapi/gigapi/v2/merge/handlers"
+	"github.com/gigapi/gigapi/v2/merge/repository"
+	"github.com/gigapi/gigapi/v2/merge/utils"
+	"github.com/gigapi/gigapi/v2/modules"
 	"net/http"
 	"os"
 )

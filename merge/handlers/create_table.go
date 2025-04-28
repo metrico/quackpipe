@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/gigapi/gigapi/config"
-	"github.com/gigapi/gigapi/merge/repository"
-	"github.com/gigapi/gigapi/merge/shared"
+	"github.com/gigapi/gigapi/v2/config"
+	"github.com/gigapi/gigapi/v2/merge/repository"
+	"github.com/gigapi/gigapi/v2/merge/shared"
 
 	"gopkg.in/yaml.v3"
 	"io"

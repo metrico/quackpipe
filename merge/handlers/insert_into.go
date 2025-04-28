@@ -3,10 +3,10 @@ package handlers
 import (
 	"compress/gzip"
 	"context"
-	"github.com/gigapi/gigapi/merge/parsers"
-	"github.com/gigapi/gigapi/merge/repository"
-	"github.com/gigapi/gigapi/modules"
-	"github.com/gigapi/gigapi/utils"
+	"github.com/gigapi/gigapi/v2/merge/parsers"
+	"github.com/gigapi/gigapi/v2/merge/repository"
+	"github.com/gigapi/gigapi/v2/modules"
+	"github.com/gigapi/gigapi/v2/utils"
 	"io"
 	"net/http"
 )

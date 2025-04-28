@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/gigapi/gigapi/merge/utils"
+	"github.com/gigapi/gigapi/v2/merge/utils"
 	"io"
 	"os"
 )
