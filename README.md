@@ -116,7 +116,7 @@ As read requests come in to GigAPI they are parsed and transpiled using the GigA
 
 Query Data
 ```bash
-$ curl -X POST "http://localhost:9999/query?db=mydb" \
+$ curl -X POST "http://localhost:7972/query?db=mydb" \
   -H "Content-Type: application/json"  \
   -d {"query": "SELECT time, temperature FROM weather WHERE time >= epoch_ns('2025-04-24T00:00:00'::TIMESTAMP)"}
 ```
@@ -124,7 +124,7 @@ $ curl -X POST "http://localhost:9999/query?db=mydb" \
 Series can be used with or without time ranges, ie for counting, calculating averages, etc.
 
 ```bash
-$ curl -X POST "http://localhost:9999/query?db=mydb" \
+$ curl -X POST "http://localhost:7972/query?db=mydb" \
   -H "Content-Type: application/json"  \
   -d '{"query": "SELECT count(*), avg(temperature) FROM weather"}'
 ```
