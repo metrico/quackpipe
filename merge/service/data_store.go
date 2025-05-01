@@ -2,8 +2,8 @@ package service
 
 import (
 	"fmt"
-	"github.com/apache/arrow/go/v18/arrow"
-	"github.com/apache/arrow/go/v18/arrow/array"
+	"github.com/apache/arrow/go/v14/arrow"
+	"github.com/apache/arrow/go/v14/arrow/array"
 	"github.com/gigapi/gigapi/v2/merge/data_types"
 	"sync"
 )

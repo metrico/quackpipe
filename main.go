@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/gigapi/gigapi-querier/module"
 	"github.com/gigapi/gigapi/v2/config"
 	"github.com/gigapi/gigapi/v2/merge"
 	"github.com/gigapi/gigapi/v2/modules"
@@ -24,6 +25,7 @@ func (a api) GetPathParams(r *http.Request) map[string]string {
 func initModules() {
 	stdin.Init()
 	merge.Init(&api{})
+	module.Init(&api{})
 }
 
 func main() {

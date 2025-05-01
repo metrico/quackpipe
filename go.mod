@@ -1,12 +1,13 @@
 module github.com/gigapi/gigapi/v2
 
-go 1.24
+go 1.24.1
 
-toolchain go1.24.1
+toolchain go1.24.2
 
 require (
-	github.com/apache/arrow/go/v18 v18.0.0-20240829005432-58415d1fac50
+	github.com/apache/arrow/go/v14 v14.0.2
 	github.com/expr-lang/expr v1.17.2
+	github.com/gigapi/gigapi-querier v0.0.4
 	github.com/go-faster/city v1.0.1
 	github.com/go-faster/jx v1.1.0
 	github.com/google/uuid v1.6.0
@@ -68,8 +69,8 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
+	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
